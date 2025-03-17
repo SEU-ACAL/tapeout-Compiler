@@ -644,54 +644,6 @@ struct GemminiScalarDispatchLowering : public ConvertOpToLLVMPattern<ScalarDispa
                                          int64_t vecIdxLen, int64_t dataLen)
       : ConvertOpToLLVMPattern(typeConverter), vecIdxLen(vecIdxLen), 
                                                dataLen(dataLen) {}
-  // LogicalResult
-  // matchAndRewrite(ScalarDispatchOp scalarDispatchOp, OpAdaptor adaptor,
-  //                 ConversionPatternRewriter &rewriter) const override {
-  //   Value data1 = scalarDispatchOp.getData1();
-  //   Value data2 = scalarDispatchOp.getData2();
-  //   Value data3 = scalarDispatchOp.getData3();
-  //   Value data4 = scalarDispatchOp.getData4();
-  //   Value data5 = scalarDispatchOp.getData5();
-  //   Value data6 = scalarDispatchOp.getData6();
-  //   Value data7 = scalarDispatchOp.getData7();
-  //   Value data8 = scalarDispatchOp.getData8();
-  //   // Value dataPackage = scalarDispatchOp.getDataPackage();
-  //   Value stride = scalarDispatchOp.getStride();
-  //   Value offset = scalarDispatchOp.getOffset();
-  //   Value vecIdx = scalarDispatchOp.getVecIdx();
-  //   Location loc = scalarDispatchOp.getLoc();
-  //   uint64_t data1Int = getNumberFromValue(data1);
-  //   uint64_t data2Int = getNumberFromValue(data2);
-  //   uint64_t data3Int = getNumberFromValue(data3);
-  //   uint64_t data4Int = getNumberFromValue(data4);
-  //   uint64_t data5Int = getNumberFromValue(data5);
-  //   uint64_t data6Int = getNumberFromValue(data6);
-  //   uint64_t data7Int = getNumberFromValue(data7);
-  //   uint64_t data8Int = getNumberFromValue(data8);
-  //   // uint64_t dataPackageInt = getNumberFromValue(dataPackage);
-  //   uint64_t strideInt = getNumberFromValue(stride);
-  //   uint64_t offsetInt = getNumberFromValue(offset);
-  //   uint64_t vecIdxInt = getNumberFromValue(vecIdx);
-
-  //   // uint64_t rs1 = dataPackageInt;
-
-  //   uint64_t rs1 = (data1Int & 0xFF) << offsetInt | 
-  //                  ((data2Int & 0xFF) << (dataLen + offsetInt)) |
-  //                  ((data3Int & 0xFF) << (2 * dataLen + offsetInt)) | 
-  //                  ((data4Int & 0xFF) << (3 * dataLen + offsetInt)) |
-  //                  ((data5Int & 0xFF) << (4 * dataLen + offsetInt)) | 
-  //                  ((data6Int & 0xFF) << (5 * dataLen + offsetInt)) |
-  //                  ((data7Int & 0xFF) << (6 * dataLen + offsetInt)) | 
-  //                  ((data8Int & 0xFF) << (7 * dataLen + offsetInt));
-  //   uint64_t rs2 = strideInt << vecIdxLen | vecIdxInt;
-  //   Value rs1Value = rewriter.create<arith::ConstantOp>(
-  //       loc, rewriter.getI64IntegerAttr(rs1));
-  //   Value rs2Value = rewriter.create<arith::ConstantOp>(
-  //       loc, rewriter.getI64IntegerAttr(rs2));
-  //   rewriter.replaceOpWithNewOp<ScalarDispatch_IntrOp>(scalarDispatchOp, 
-  //                                                      rs1Value, rs2Value);
-  //   return success();
-  // }
 LogicalResult
 matchAndRewrite(ScalarDispatchOp scalarDispatchOp, OpAdaptor adaptor,
                 ConversionPatternRewriter &rewriter) const override {
@@ -1088,10 +1040,8 @@ class GemminiTileMatMulLowering : public ConvertOpToLLVMPattern<TileMatMulOp> {
     bool dAddrNull = llvm::dyn_cast<arith::ConstantOp>(d.getDefiningOp()) &&
                      getNumberFromValue(d) == 0;
 
-    
     size_t rowBlocks = (K + dim - 1) / dim;  // 向上取整
     size_t colBlocks = (N + dim - 1) / dim;  // 向上取整
-    
     // move B matrix from main memory to spad 
     for (size_t i = 0; i < rowBlocks; i++) {
       for (size_t j = 0; j < colBlocks; j++) {
@@ -1132,64 +1082,28 @@ class GemminiTileMatMulLowering : public ConvertOpToLLVMPattern<TileMatMulOp> {
 
         // 8*8块内循环
         for (size_t v = 0; v < VecSet; v++) {
-            // int64_t addr[8] = {0};
-            // Value dataValues[8] = {}; // 初始化数组
-            // Value zeroValue = rewriter.create<arith::ConstantOp>(
-            //     loc, rewriter.getI8IntegerAttr(0));
-            // for (int i = 0; i < 8; i++) {
-            //   dataValues[i] = zeroValue;
-            // }
-              // SmallVector<Value, 8> dataValues(8); 
-              // SmallVector<int64_t, 8> addr(8, 0); 
-              
-              // // 初始化所有元素为零常量
-              // Value zeroValue = rewriter.create<arith::ConstantOp>(
-              //     loc, rewriter.getI8IntegerAttr(0));
-              // for (int i = 0; i < 8; i++) {
-              //   dataValues[i] = zeroValue;
-              // }
 
-// 创建两个memref来存储addr和data
-MemRefType memRefType = MemRefType::get({8}, rewriter.getIntegerType(8));
+        MemRefType memRefType = MemRefType::get({8}, rewriter.getIntegerType(8));
+        Value addrMemRef = rewriter.create<memref::AllocaOp>(loc, memRefType);
+        Value dataMemRef = rewriter.create<memref::AllocaOp>(loc, memRefType);
+        for (int i = 0; i < 8; i++) {
+          Value iIndex = rewriter.create<arith::ConstantIndexOp>(loc, i);
+        Value zeroI8 = rewriter.create<arith::ConstantOp>(loc, rewriter.getI8IntegerAttr(0));
+          rewriter.create<memref::StoreOp>(loc, zeroI8, addrMemRef, ValueRange{iIndex});
+          rewriter.create<memref::StoreOp>(loc, zeroI8, dataMemRef, ValueRange{iIndex});
+        }
 
-// 分配空间
-Value addrMemRef = rewriter.create<memref::AllocaOp>(loc, memRefType);
-Value dataMemRef = rewriter.create<memref::AllocaOp>(loc, memRefType);
-// 初始化memref为0
-for (int i = 0; i < 8; i++) {
-  Value iIndex = rewriter.create<arith::ConstantIndexOp>(loc, i);
-Value zeroI8 = rewriter.create<arith::ConstantOp>(loc, rewriter.getI8IntegerAttr(0));
-  rewriter.create<memref::StoreOp>(loc, zeroI8, addrMemRef, ValueRange{iIndex});
-  rewriter.create<memref::StoreOp>(loc, zeroI8, dataMemRef, ValueRange{iIndex});
-}
+        for (size_t i = 0; i < blockRows; i++) {
+          uint64_t aRelativeAddr = (i + rb * VecSet) * K + (cb * VecSet) + v;
+          Value iIndex = rewriter.create<arith::ConstantIndexOp>(loc, i);
+          Value addrValue = rewriter.create<arith::ConstantOp>(
+              loc, rewriter.getI8IntegerAttr(aRelativeAddr & 0xFF));
+          rewriter.create<memref::StoreOp>(loc, addrValue, addrMemRef, ValueRange{iIndex});
+          Value indexVal = rewriter.create<arith::ConstantIndexOp>(loc, aRelativeAddr);
+          Value aData = rewriter.create<memref::LoadOp>(loc, AMemRef, ValueRange{indexVal});
+          rewriter.create<memref::StoreOp>(loc, aData, dataMemRef, ValueRange{iIndex});
+        }
 
-for (size_t i = 0; i < blockRows; i++) {
-  // 计算地址
-  uint64_t aRelativeAddr = (i + rb * VecSet) * K + (cb * VecSet) + v;
-  Value iIndex = rewriter.create<arith::ConstantIndexOp>(loc, i);
-  
-  // 存储地址
-  Value addrValue = rewriter.create<arith::ConstantOp>(
-      loc, rewriter.getI8IntegerAttr(aRelativeAddr & 0xFF));
-  rewriter.create<memref::StoreOp>(loc, addrValue, addrMemRef, ValueRange{iIndex});
-  
-  // 加载数据元素
-  Value indexVal = rewriter.create<arith::ConstantIndexOp>(loc, aRelativeAddr);
-  Value aData = rewriter.create<memref::LoadOp>(loc, AMemRef, ValueRange{indexVal});
-  
-  // 确保是i8类型
-  // Value aData_i8;
-  // if (!aData.getType().isInteger(8)) {
-  //   aData_i8 = rewriter.create<arith::TruncIOp>(loc, rewriter.getIntegerType(8), aData);
-  // } else {
-  //   aData_i8 = aData;
-  // }
-  
-  // 存储到dataMemRef
-  rewriter.create<memref::StoreOp>(loc, aData, dataMemRef, ValueRange{iIndex});
-}
-
-        // 创建ScalarDispatchOp操作
         uint64_t stride1 = 1;
         Value stride1Op = rewriter.create<arith::ConstantOp>(
             loc, rewriter.getI64IntegerAttr(stride1));
@@ -1199,82 +1113,25 @@ for (size_t i = 0; i < blockRows; i++) {
         uint64_t aVecIdx = v + 1;
         Value aVecIdxOp = rewriter.create<arith::ConstantOp>(
             loc, rewriter.getI64IntegerAttr(aVecIdx));
-
-        // 发送addr
+        // 第一次发送A的addr
         rewriter.create<ScalarDispatchOp>(loc, addrMemRef, stride1Op, offset1Op, aVecIdxOp);
 
-        // 发送data
         uint64_t offset2 = 1;
         Value offset2Op = rewriter.create<arith::ConstantOp>(
             loc, rewriter.getI64IntegerAttr(offset2));
+        // 第二次发送A的data
         rewriter.create<ScalarDispatchOp>(loc, dataMemRef, stride1Op, offset2Op, aVecIdxOp);
-// Value zeroI8 = rewriter.create<arith::ConstantOp>(loc, rewriter.getI8IntegerAttr(0));
-  //         for (size_t i = 0; i < blockRows; i++) {
-  //           // aAddr
-  //           uint64_t aRelativeAddr = (i + rb * VecSet) * K + (cb * VecSet) + v;
-  //           addr[i] = aRelativeAddr & 0xFF;
-  //           // aData              
-  //           Value indexVal = rewriter.create<arith::ConstantIndexOp>(loc, aRelativeAddr);
-  //           Value aData = rewriter.create<memref::LoadOp>(loc, AMemRef, ValueRange{indexVal});
-  //           // 确保是i8类型
-  //             Value aAddr_i8;
-  // if (!aAddr.getType().isInteger(8)) {
-  //   aAddr_i8 = rewriter.create<arith::TruncIOp>(loc, i8Type, aAddr);
-  // } else {
-  //   aAddr_i8 = aAddr;
-  // }
-  // Value aData_i8;
-  // if (!aData.getType().isInteger(8)) {
-  //   aData_i8 = rewriter.create<arith::TruncIOp>(loc, i8Type, aData);
-  // } else {
-  //   aData_i8 = aData;
-  // }
-  
-  // // 插入到向量的第i个位置
-  // addrVector = rewriter.create<vector::InsertOp>(loc, aAddr_i8, addrVector, i);
-  // dataVector = rewriter.create<vector::InsertOp>(loc, aData_i8, dataVector, i);
-  //           // dataValues[i] = aData;
-  //           uint64_t bRow = (cb * VecSet) + v;
-  //           uint64_t bSpAddr = bSpAddrStart + bRow * N; // 计算B矩阵在scratchpad中的地址
-  //         }
-          
-  //         uint64_t stride1 = 1;
-  //         Value stride1Op = rewriter.create<arith::ConstantOp>(
-  //             loc, rewriter.getI64IntegerAttr(stride1));
-  //         uint64_t offset1 = 0;
-  //         Value offset1Op = rewriter.create<arith::ConstantOp>(
-  //             loc, rewriter.getI64IntegerAttr(offset1));
-  //         uint64_t aVecIdx = v + 1;
-  //         Value aVecIdxOp = rewriter.create<arith::ConstantOp>(
-  //             loc, rewriter.getI64IntegerAttr(aVecIdx));
-          
-          // Value addrValues[8];
-          // for (int i = 0; i < 8; i++) {
-          //   addrValues[i] = rewriter.create<arith::ConstantOp>(
-          //       loc, rewriter.getI64IntegerAttr(addr[i]));
-          // }
-          // 第一次发送加载A的addr
-          // rewriter.create<ScalarDispatchOp>(loc, addrMemRef, offset1Op, stride1Op, offset1Op);
-          // uint64_t stride2 = 1;
-          // Value stride2Op = rewriter.create<arith::ConstantOp>(
-          //     loc, rewriter.getI64IntegerAttr(stride2));
-          // uint64_t offset2 = 1;
-          // Value offset2Op = rewriter.create<arith::ConstantOp>(
-          //     loc, rewriter.getI64IntegerAttr(offset2));
-          // // 第二次发送从memref加载A的data
-          // rewriter.create<ScalarDispatchOp>(loc, dataMemRef, offset2Op, stride2Op, offset2Op);
-          
-          // B矩阵从scratchpad加载到向量寄存器
-          uint64_t bSpAddr = bSpAddrStart + (cb * VecSet + v) * N; // 完成B矩阵地址计算
-          Value bSpAddrOp = rewriter.create<arith::ConstantOp>(
-              loc, rewriter.getI64IntegerAttr(bSpAddr));
-          Value vecLenOp = rewriter.create<arith::ConstantOp>(
-            loc, rewriter.getI64IntegerAttr(1)); 
-          uint64_t bVecIdx = v;
-          Value bVecIdxOp = rewriter.create<arith::ConstantOp>(
-              loc, rewriter.getI64IntegerAttr(bVecIdx));
-          // 第三次从scratchpad中加载B的data
-          rewriter.create<VecLoadOp>(loc, bSpAddrOp, vecLenOp, bVecIdxOp);
+        // B矩阵从scratchpad加载到向量寄存器
+        uint64_t bSpAddr = bSpAddrStart + (cb * VecSet + v) * N; // 完成B矩阵地址计算
+        Value bSpAddrOp = rewriter.create<arith::ConstantOp>(
+            loc, rewriter.getI64IntegerAttr(bSpAddr));
+        Value vecLenOp = rewriter.create<arith::ConstantOp>(
+          loc, rewriter.getI64IntegerAttr(1)); 
+        uint64_t bVecIdx = v;
+        Value bVecIdxOp = rewriter.create<arith::ConstantOp>(
+            loc, rewriter.getI64IntegerAttr(bVecIdx));
+        // 第三次从scratchpad中加载B的data
+        rewriter.create<VecLoadOp>(loc, bSpAddrOp, vecLenOp, bVecIdxOp);
         
         // 3. Vec MISC-Level Vector-Scalar Multiplication
         uint64_t vecTargetIdx = v / 2 + 16;
@@ -1300,7 +1157,6 @@ for (size_t i = 0; i < blockRows; i++) {
                                       vecIdxValues[5], vecIdxValues[6], vecIdxValues[7]);
 
         // 5. Vec Store C to Spad
-    
         if (cb == colBlocks - 1) {
           uint64_t spadAddr = rb;
           Value spadAddrOp = rewriter.create<arith::ConstantOp>(
@@ -1685,16 +1541,6 @@ public:
     * 得到的C矩阵块大小是：(tileI×dim) × (tileJ×dim)
     */
     
-    // if (VectorMode) {
-    //     spTiledVecMatmulRs(aArray, bArrayindexCastOp, dArrayindexCastOp, cArrayindexCastOp,
-    //                   aScaleFactor, bScaleFactor, dScaleFactor, 
-    //                   dimI, dimJ, dimK,  
-    //                   0, 0, 0,  
-    //                   strideA, strideB, strideD, strideC,
-    //                   aTranspose, bTranspose, fullC, lowD,
-    //                   false, repeatingBias, act, 
-    //                   scale, rewriter, tileMatMulOp); 
-    // } else {
     tiledMatmulOuter(dimI, dimJ, dimK, aArray, aArrayindexCastOp, bArrayindexCastOp,
                      dArrayindexCastOp, cArrayindexCastOp, strideA, strideB,
                      strideD, strideC, aScaleFactor, bScaleFactor, dScaleFactor,
