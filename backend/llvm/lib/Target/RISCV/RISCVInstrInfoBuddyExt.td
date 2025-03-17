@@ -179,6 +179,58 @@ def LOOP_CONV_WS_CONFIG6 : RVInstR<0b0010101, 0b011, OPC_CUSTOM_3, (outs),
     let rd = 0;
 }
 
+// -----------------------------------------------------------------------------
+// Vector operations (Funct start from 0x23)
+// -----------------------------------------------------------------------------
+let hasSideEffects = 1, mayLoad = 1, mayStore = 1, Predicates = [HasBuddyExt] in 
+def VEC_LOAD : RVInstR<0b0010111/*0x23*/, 0b011, OPC_CUSTOM_3, (outs),
+                        (ins GPR:$rs1, GPR:$rs2), "vec_load", "$rs1, $rs2"> {
+    let rd = 0;
+}
+
+let hasSideEffects = 1, mayLoad = 1, mayStore = 1, Predicates = [HasBuddyExt] in 
+def VEC_STORE : RVInstR<0b0011000/*0x24*/, 0b011, OPC_CUSTOM_3, (outs),
+                        (ins GPR:$rs1, GPR:$rs2), "vec_store", "$rs1, $rs2"> {
+    let rd = 0;
+} 
+
+let Predicates = [HasBuddyExt] in 
+def VEC_ADD : RVInstR<0b0011001/*0x25*/, 0b011, OPC_CUSTOM_3, (outs),
+                        (ins GPR:$rs1, GPR:$rs2), "vec_add", "$rs1, $rs2"> {
+    let rd = 0;
+} 
+
+let Predicates = [HasBuddyExt] in 
+def VEC_SCALAR_MUL : RVInstR<0b0011010/*0x26*/, 0b011, OPC_CUSTOM_3, (outs),
+                        (ins GPR:$rs1, GPR:$rs2), "vec_scalar_mul", "$rs1, $rs2"> {
+    let rd = 0;
+} 
+
+let Predicates = [HasBuddyExt] in 
+def VEC_BROADCAST : RVInstR<0b0011011/*0x27*/, 0b011, OPC_CUSTOM_3, (outs),
+                        (ins GPR:$rs1, GPR:$rs2), "vec_broadcast", "$rs1, $rs2"> {
+    let rd = 0;
+} 
+
+let Predicates = [HasBuddyExt] in 
+def SCALAR_DISPATCH : RVInstR<0b0011100/*0x28*/, 0b011, OPC_CUSTOM_3, (outs),
+                        (ins GPR:$rs1, GPR:$rs2), "vec_dispatch", "$rs1, $rs2"> {
+    let rd = 0;
+} 
+
+let Predicates = [HasBuddyExt] in 
+def VEC_SCATTER : RVInstR<0b0011101/*0x29*/, 0b011, OPC_CUSTOM_3, (outs),
+                        (ins GPR:$rs1, GPR:$rs2), "vec_scatter", "$rs1, $rs2"> {
+    let rd = 0;
+} 
+
+let Predicates = [HasBuddyExt] in 
+def VEC_MISC_MUL : RVInstR<0b0011110/*0x30*/, 0b011, OPC_CUSTOM_3, (outs),
+                        (ins GPR:$rs1, GPR:$rs2), "vec_misc_mul", "$rs1, $rs2"> {
+    let rd = 0;
+} 
+
+
 let Predicates = [HasBuddyExt] in 
 def : Pat<(int_riscv_mvin GPR:$rs1, GPR:$rs2), (MVIN GPR:$rs1, GPR:$rs2)>;
 
@@ -253,3 +305,30 @@ def : Pat<(int_riscv_loop_conv_ws_config5 GPR:$rs1, GPR:$rs2), (LOOP_CONV_WS_CON
 
 let Predicates = [HasBuddyExt] in 
 def : Pat<(int_riscv_loop_conv_ws_config6 GPR:$rs1, GPR:$rs2), (LOOP_CONV_WS_CONFIG6 GPR:$rs1, GPR:$rs2)>;
+
+// -----------------------------------------------------------------------------
+// Vector operations
+// -----------------------------------------------------------------------------
+let Predicates = [HasBuddyExt] in 
+def : Pat<(int_riscv_vec_load GPR:$rs1, GPR:$rs2), (VEC_LOAD GPR:$rs1, GPR:$rs2)>;
+
+let Predicates = [HasBuddyExt] in 
+def : Pat<(int_riscv_vec_store GPR:$rs1, GPR:$rs2), (VEC_STORE GPR:$rs1, GPR:$rs2)>;
+
+let Predicates = [HasBuddyExt] in 
+def : Pat<(int_riscv_vec_add GPR:$rs1, GPR:$rs2), (VEC_ADD GPR:$rs1, GPR:$rs2)>;
+
+let Predicates = [HasBuddyExt] in 
+def : Pat<(int_riscv_vec_scalar_mul GPR:$rs1, GPR:$rs2), (VEC_SCALAR_MUL GPR:$rs1, GPR:$rs2)>;
+
+let Predicates = [HasBuddyExt] in 
+def : Pat<(int_riscv_vec_broadcast GPR:$rs1, GPR:$rs2), (VEC_BROADCAST GPR:$rs1, GPR:$rs2)>;
+
+let Predicates = [HasBuddyExt] in 
+def : Pat<(int_riscv_scalar_dispatch GPR:$rs1, GPR:$rs2), (SCALAR_DISPATCH GPR:$rs1, GPR:$rs2)>;
+
+let Predicates = [HasBuddyExt] in 
+def : Pat<(int_riscv_vec_scatter GPR:$rs1, GPR:$rs2), (VEC_SCATTER GPR:$rs1, GPR:$rs2)>;
+
+let Predicates = [HasBuddyExt] in 
+def : Pat<(int_riscv_vec_misc_mul GPR:$rs1, GPR:$rs2), (VEC_MISC_MUL GPR:$rs1, GPR:$rs2)>;

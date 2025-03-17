@@ -196,6 +196,12 @@ def PrintOp : Gemmini_Op<"print"> {
   let assemblyFormat = "$input attr-dict `:` type($input)";
 }
 
+def PrintScalarOp : Gemmini_Op<"print_scalar"> {
+  let summary = "Print a scalar value.";
+  let arguments = (ins AnyTypeOf<[I64, I32, F32, F64]>:$input); 
+  let assemblyFormat = "$input attr-dict `:` type($input)";
+}
+
 def PreloadZerosOp : Gemmini_Op<"preload_zeros"> {
   let summary = "Preload zeros in scratchpad";
   let description = [{
@@ -326,6 +332,137 @@ def TileConvOp : Gemmini_Op<"tile_conv"> {
   }];
 }
 
+// -----------------------------------------------------------------------------
+// Gemmini Vector Ops
+// -----------------------------------------------------------------------------
+
+  // 从scratchpad加载向量到指定内存
+def VecLoadOp : Gemmini_Op<"vec_load"> {
+  let summary = "Load vector from scratchpad";
+  let description = [{
+    Load vector from scratchpad to specified memory.
+    - Local scratchpad address
+    - Target vector
+    - Vector length
+  }];
+  let arguments = (ins I64:$spadAddr, /* 14 bit */
+                       I64:$vecLen, 
+                       I64:$vecIdx);
+  let assemblyFormat = "$spadAddr $vecLen $vecIdx attr-dict `:` type($spadAddr) type($vecLen) type($vecIdx)";
+}
+
+// 将向量存储到scratchpad
+def VecStoreOp : Gemmini_Op<"vec_store"> {
+  let summary = "Store vector to scratchpad";
+  let description = [{
+    Store vector from specified memory to scratchpad.
+    - Source vector
+    - Local scratchpad address
+    - Vector length
+  }];
+  let arguments = (ins I64:$spadAddr, 
+                       I64:$vecLen,
+                       I64:$vecIdx);
+  let assemblyFormat = "$spadAddr $vecLen $vecIdx attr-dict `:` type($spadAddr) type($vecLen) type($vecIdx)";
+}
+
+// 执行两个向量的加法操作
+def VecAddOp : Gemmini_Op<"vec_add"> {
+  let summary = "Vector addition";
+  let description = [{
+    Perform addition of two vectors.
+    - First input vector
+    - Second input vector
+    - Output vector
+  }];
+  let arguments = (ins I64:$vecIdx);
+  let assemblyFormat = "$vecIdx attr-dict `:` type($vecIdx)";
+}
+
+// 执行向量与标量的乘法操作
+def VecScalarMulOp : Gemmini_Op<"vec_scalar_mul"> {
+  let summary = "Vector-scalar multiplication";
+  let description = [{
+    Perform multiplication of a vector by a scalar.
+    - Input vector
+    - Scalar value
+    - Output vector
+  }];
+  let arguments = (ins I64:$scalar,
+                       I64:$vecIdx);
+  let assemblyFormat = "$scalar $vecIdx attr-dict `:` type($scalar) type($vecIdx)";
+}
+
+// 将标量值广播到目标向量的所有元素
+def VecBroadcastOp : Gemmini_Op<"vec_broadcast"> {
+  let summary = "Broadcast scalar to vector";
+  let description = [{
+    Broadcast scalar value to all elements of target vector.
+    - Scalar value
+    - Target vector
+    - Vector length
+  }];
+  let arguments = (ins I64:$scalar,
+                       I64:$vecIdx);
+  let assemblyFormat = "$scalar $vecIdx attr-dict `:` type($scalar) type($vecIdx)";
+}
+
+def ScalarDispatchOp : Gemmini_Op<"scalar_dispatch"> {
+  let summary = "Dispatch scalar";
+  let description = [{
+    Dispatch from CPU to NPU Vector.
+  }];
+  let arguments = (ins MemRefRankOf<[AnyType], [1]>:$data, 
+                       I64:$stride,
+                       I64:$offset,
+                       I64:$vecIdx);
+  let assemblyFormat = "$data $stride $offset $vecIdx attr-dict `:` type($data) type($stride) type($offset) type($vecIdx)";
+}
+
+def VecScatterOp : Gemmini_Op<"vec_scatter"> {
+  let summary = "Scatter vector";
+  let description = [{
+    Scatter vectors to one vector.
+  }];
+  let arguments = (ins I64:$targetAddr,
+                       I64:$vecIdx1,
+                       I64:$vecIdx2,
+                       I64:$vecIdx3,
+                       I64:$vecIdx4,
+                       I64:$vecIdx5,
+                       I64:$vecIdx6,
+                       I64:$vecIdx7,
+                       I64:$vecIdx8);
+  let assemblyFormat = "$targetAddr $vecIdx1 $vecIdx2 $vecIdx3 $vecIdx4 $vecIdx5 $vecIdx6 $vecIdx7 $vecIdx8 attr-dict `:` type($targetAddr) type($vecIdx1) type($vecIdx2) type($vecIdx3) type($vecIdx4) type($vecIdx5) type($vecIdx6) type($vecIdx7) type($vecIdx8)";
+}
+
+def VecMiscMulOp : Gemmini_Op<"vec_misc_mul"> {
+  let summary = "Vector-matrix multiplication";
+  let description = [{
+    MISC-Level vector_scalar multiplication operation.
+  }];
+  let arguments = (ins I64:$vecTargetIdx,
+                       I64:$vecSourceIdx);
+  let assemblyFormat = "$vecTargetIdx $vecSourceIdx attr-dict `:` type($vecTargetIdx) type($vecSourceIdx)";
+}
+
+// 执行向量矩阵乘法操作
+// def VecMatMulOp : Gemmini_Op<"vec_matmul"> {
+//   let summary = "Vector-matrix multiplication";
+//   let description = [{
+//     Perform vector-matrix multiplication operation.
+//     - Input vector
+//     - Input matrix
+//     - Output vector
+//     - Optional activation function
+//     - Optional scale factor
+//   }];
+//   let arguments = (ins I64:$vecIdx,
+//                        I64:$matIdx,
+//                        I64:$vecLen);
+//   let assemblyFormat = "$vecIdx $matIdx attr-dict `:` type($vecIdx) type($matIdx)";
+// }
+
 //===----------------------------------------------------------------------===//
 // Gemmini intrinsic operation definitions
 //===----------------------------------------------------------------------===//
@@ -412,6 +549,33 @@ def Gemmini_LoopConvWsConfig5_IntrOp : Gemmini_IntrOpBase<"loop_conv_ws_config5"
   Arguments<(ins LLVM_Type, LLVM_Type)>;
 
 def Gemmini_LoopConvWsConfig6_IntrOp : Gemmini_IntrOpBase<"loop_conv_ws_config6">,
+  Arguments<(ins LLVM_Type, LLVM_Type)>;
+
+// -----------------------------------------------------------------------------
+// Vector operations
+// -----------------------------------------------------------------------------
+def Gemmini_VecLoad_IntrOp : Gemmini_IntrOpBase<"vec_load">,
+  Arguments<(ins LLVM_Type, LLVM_Type)>;
+
+def Gemmini_VecStore_IntrOp : Gemmini_IntrOpBase<"vec_store">,
+  Arguments<(ins LLVM_Type, LLVM_Type)>;
+
+def Gemmini_VecScalarMul_IntrOp : Gemmini_IntrOpBase<"vec_scalar_mul">,
+  Arguments<(ins LLVM_Type, LLVM_Type)>;
+
+def Gemmini_VecBroadcast_IntrOp : Gemmini_IntrOpBase<"vec_broadcast">,
+  Arguments<(ins LLVM_Type, LLVM_Type)>;
+
+def Gemmini_VecAdd_IntrOp : Gemmini_IntrOpBase<"vec_add">,
+  Arguments<(ins LLVM_Type, LLVM_Type)>;
+
+def Gemmini_ScalarDispatch_IntrOp : Gemmini_IntrOpBase<"scalar_dispatch">,
+  Arguments<(ins LLVM_Type, LLVM_Type)>;
+
+def Gemmini_VecScatter_IntrOp : Gemmini_IntrOpBase<"vec_scatter">,
+  Arguments<(ins LLVM_Type, LLVM_Type)>;
+
+def Gemmini_VecMiscMul_IntrOp : Gemmini_IntrOpBase<"vec_misc_mul">,
   Arguments<(ins LLVM_Type, LLVM_Type)>;
 
 #endif 
