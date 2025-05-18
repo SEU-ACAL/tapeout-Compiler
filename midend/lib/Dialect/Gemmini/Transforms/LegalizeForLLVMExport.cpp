@@ -1514,32 +1514,6 @@ public:
         break;
     }
     int dataflow = tileMatMulOp.getDataflow();
-
-  /**
-    * @brief 执行分块矩阵乘法操作
-    * 
-    * @param dimI 矩阵A的行数              | VectorMode 需要关注
-    * @param dimJ 矩阵C的列数/矩阵B的列数   | VectorMode 需要关注
-    * @param dimK 矩阵A的列数/矩阵B的行数   | VectorMode 需要关注
-    * @param A 输入矩阵A                   | VectorMode 需要关注
-    * @param B 输入矩阵B                   | VectorMode 需要关注
-    * @param D 偏置矩阵D                   | VectorMode 需要关注
-    * @param C 输出结果矩阵C               | VectorMode 需要关注
-    * @param tileI 矩阵乘法I维度的分块大小   | VectorMode 需要关注
-    * @param tileJ 矩阵乘法J维度的分块大小   | VectorMode 需要关注
-    * @param tileK 矩阵乘法K维度的分块大小   | VectorMode 需要关注
-    * @param act 激活函数类型               | VectorMode 需要关注
-    * @param fullC 是否使用全精度计算结果C
-    * @param lowD 是否使用低精度偏置D
-    * @param weightA 矩阵A的权重值
-    * @param VectorMode 是否启用向量模式    | VectorMode 需要关注
-    * @param RiscMode 是否启用RISC模式
-    * 
-    * A(i, k) * B(k, j) = C(i, j)
-    * 一次计算处理的A矩阵块大小是：(tileI×dim) × (tileK×dim)
-    * 一次计算处理的B矩阵块大小是：(tileK×dim) × (tileJ×dim)
-    * 得到的C矩阵块大小是：(tileI×dim) × (tileJ×dim)
-    */
     
     tiledMatmulOuter(dimI, dimJ, dimK, aArray, aArrayindexCastOp, bArrayindexCastOp,
                      dArrayindexCastOp, cArrayindexCastOp, strideA, strideB,

@@ -24,6 +24,8 @@
 #include "Dialect/DIP/DIPOps.h"
 #include "Dialect/Gemmini/GemminiDialect.h"
 #include "Dialect/Gemmini/GemminiOps.h"
+#include "Dialect/BuckyBall/BuckyBallDialect.h"
+#include "Dialect/BuckyBall/BuckyBallOps.h"
 #include "Dialect/RVV/RVVDialect.h"
 #include "Dialect/Sche/ScheDialect.h"
 #include "Dialect/Sche/ScheOps.h"
@@ -37,6 +39,8 @@ MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(DAP, dap, buddy::dap::DAPDialect)
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(DIP, dip, buddy::dip::DIPDialect)
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Gemmini, gemmini,
                                       buddy::gemmini::GemminiDialect)
+MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(BuckyBall, buckyball,
+                                      buddy::buckyball::BuckyBallDialect)
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(RVV, rvv, buddy::rvv::RVVDialect)
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Sche, sche, buddy::sche::ScheDialect)
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(VectorExp, vector_exp,

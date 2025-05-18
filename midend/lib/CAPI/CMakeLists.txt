@@ -24,6 +24,8 @@ add_mlir_public_c_api_library(BuddyMLIRCAPI
   BuddyDIP
   BuddyGemmini
   BuddyGemminiTransforms
+  BuddyBuckyBall
+  BuddyBuckyBallTransforms
   BuddyRVV
   BuddyRVVTransforms
   BuddySche

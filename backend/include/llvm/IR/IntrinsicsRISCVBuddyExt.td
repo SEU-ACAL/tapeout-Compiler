@@ -118,3 +118,6 @@ def int_riscv_vec_scatter : Intrinsic<[], [llvm_i64_ty, llvm_i64_ty], []>;
 
 let TargetPrefix = "riscv" in 
 def int_riscv_vec_misc_mul : Intrinsic<[], [llvm_i64_ty, llvm_i64_ty], []>;
+
+let TargetPrefix = "riscv" in 
+def int_riscv_bb_mul_warp16 : Intrinsic<[], [llvm_i64_ty, llvm_i64_ty], []>;

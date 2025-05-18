@@ -52,6 +52,14 @@ declare_mlir_dialect_python_bindings(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT BuddyMLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/buddy_mlir"
+  TD_FILE dialects/BuckyBallBinding.td
+  SOURCES
+    dialects/buckyball.py
+  DIALECT_NAME buckyball)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT BuddyMLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/buddy_mlir"
   TD_FILE dialects/RVVBinding.td
   SOURCES
     dialects/rvv.py

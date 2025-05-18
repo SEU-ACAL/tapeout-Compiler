@@ -43,6 +43,8 @@
 #include "GPU/TransformOps.h"
 #include "Gemmini/GemminiDialect.h"
 #include "Gemmini/GemminiOps.h"
+#include "BuckyBall/BuckyBallDialect.h"
+#include "BuckyBall/BuckyBallOps.h"
 #include "RVV/RVVDialect.h"
 #include "Sche/ScheDialect.h"
 #include "Sche/ScheOps.h"
@@ -78,6 +80,7 @@ void registerDepthwiseConv2DNhwcHwcOptimizePass();
 void registerLowerVectorExpPass();
 void registerLowerGemminiPass();
 void registerLowerLinalgToGemminiPass();
+void registerLowerBuckyBallPass();
 void registerDeviceSchedulePass();
 void registerLowerSchePass();
 void registerFuncBufferizeDynamicOffsetPass();
@@ -109,6 +112,7 @@ int main(int argc, char **argv) {
   mlir::buddy::registerLowerVectorExpPass();
   mlir::buddy::registerLowerGemminiPass();
   mlir::buddy::registerLowerLinalgToGemminiPass();
+  mlir::buddy::registerLowerBuckyBallPass();
 
   // Register Several Optimize Pass.
   mlir::buddy::registerMatMulOptimizePass();
@@ -144,6 +148,7 @@ int main(int argc, char **argv) {
                   buddy::vector_exp::VectorExpDialect,
                   buddy::vir::VIRDialect,
                   buddy::gemmini::GemminiDialect,
+                  buddy::buckyball::BuckyBallDialect,
                   buddy::sche::ScheDialect>();
   // clang-format on
 

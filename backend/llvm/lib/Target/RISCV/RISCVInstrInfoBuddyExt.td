@@ -230,6 +230,12 @@ def VEC_MISC_MUL : RVInstR<0b0011110/*0x30*/, 0b011, OPC_CUSTOM_3, (outs),
     let rd = 0;
 } 
 
+let Predicates = [HasBuddyExt] in 
+def VEC_MUL_WARP16 : RVInstR<0b0011111/*0x31*/, 0b011, OPC_CUSTOM_3, (outs),
+                        (ins GPR:$rs1, GPR:$rs2), "bb_mul_warp16", "$rs1, $rs2"> {
+    let rd = 0;
+}
+
 
 let Predicates = [HasBuddyExt] in 
 def : Pat<(int_riscv_mvin GPR:$rs1, GPR:$rs2), (MVIN GPR:$rs1, GPR:$rs2)>;
@@ -332,3 +338,7 @@ def : Pat<(int_riscv_vec_scatter GPR:$rs1, GPR:$rs2), (VEC_SCATTER GPR:$rs1, GPR
 
 let Predicates = [HasBuddyExt] in 
 def : Pat<(int_riscv_vec_misc_mul GPR:$rs1, GPR:$rs2), (VEC_MISC_MUL GPR:$rs1, GPR:$rs2)>;
+
+// buckyball
+let Predicates = [HasBuddyExt] in 
+def : Pat<(int_riscv_bb_mul_warp16 GPR:$rs1, GPR:$rs2), (VEC_MUL_WARP16 GPR:$rs1, GPR:$rs2)>;

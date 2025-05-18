@@ -35,6 +35,8 @@ target_link_libraries(buddy-opt
   BuddyGemmini
   LowerGemminiPass
   LowerLinalgToGemminiPass
+  BuddyBuckyBall
+  LowerBuckyBallPass
   SchedulingOnDevices
   LowerSche
   FuncBufferizeDynamicOffset
