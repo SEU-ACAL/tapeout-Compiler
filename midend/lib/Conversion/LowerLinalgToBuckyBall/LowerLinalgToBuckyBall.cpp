@@ -36,8 +36,7 @@ using namespace buddy;
 namespace {
 class MatmulLowering : public OpRewritePattern<linalg::MatmulOp> {
 public:
-  explicit MatmulLowering(MLIRContext *context, std::string accType)
-      : OpRewritePattern(context), accType(accType) {}
+  explicit MatmulLowering(MLIRContext *context) : OpRewritePattern(context) {}
   using OpRewritePattern<linalg::MatmulOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(linalg::MatmulOp matMulOp,
                                 PatternRewriter &rewriter) const override {
@@ -47,42 +46,79 @@ public:
     Value input0 = inputs[0];
     Value input1 = inputs[1];
     Value output0 = ouputs[0];
-    MemRefType input0Type =  dyn_cast<MemRefType>(input0.getType());
-    MemRefType biasType =
-        MemRefType::get(input0Type.getShape(), rewriter.getI32Type());
-    TypedAttr fillOpInputAttr = rewriter.getI32IntegerAttr(0);
-    Type fillOpInsType = rewriter.getI32Type();
-    if (accType == "f32") {
-      biasType = MemRefType::get(input0Type.getShape(), rewriter.getF32Type());
-      fillOpInputAttr = rewriter.getF32FloatAttr(0);
-      fillOpInsType = rewriter.getF32Type();
-    }
-    llvm::APFloat scale1((float)1.0);
-    llvm::APFloat scale0((float)0.0);
-    Value bias = rewriter.create<memref::AllocOp>(loc, biasType);
-    Value fillOpInputValue =
-        rewriter.create<arith::ConstantOp>(loc, fillOpInsType, fillOpInputAttr);
-    rewriter.create<linalg::FillOp>(loc, fillOpInputValue, bias);
-    rewriter.replaceOpWithNewOp<buckyball::TileMatMulOp>(
-        matMulOp, input0, input1, output0, bias, /*aScaleFactor = */ scale1,
-        /*bScaleFactor = */ scale1, /*dScaleFactor = */ scale1, /*act = */ 0,
-        /*accScale = */ scale1, /*bertScale = */ scale0);
-    rewriter.create<memref::DeallocOp>(loc, bias);
+    // Value warpNum = rewriter.create<arith::ConstantOp>(loc, rewriter.getI64Type(), 
+    //     rewriter.getI64IntegerAttr(16));
+    rewriter.replaceOpWithNewOp<buckyball::VecTileMatMulOp>(
+        matMulOp, input0, input1, output0);
     return success();
   }
 
 private:
-  std::string accType;
+};
+
+class BatchMatMulOpLowering : public OpRewritePattern<linalg::BatchMatmulOp> {
+public:
+  using OpRewritePattern<linalg::BatchMatmulOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(linalg::BatchMatmulOp batchMatMulOp,
+                                PatternRewriter &rewriter) const override {
+    Location loc = batchMatMulOp.getLoc();
+    auto inputs = batchMatMulOp.getInputs();
+    Value input0 = inputs[0];
+    Value input1 = inputs[1];
+    Value output = batchMatMulOp.getOutputs()[0];
+    MemRefType input0Type =  dyn_cast<MemRefType>(input0.getType());
+    ArrayRef<int64_t> input0Shape = input0Type.getShape();
+    MemRefType input1Type =  dyn_cast<MemRefType>(input1.getType());
+    ArrayRef<int64_t> input1Shape = input1Type.getShape();
+    MemRefType outputType =  dyn_cast<MemRefType>(output.getType());
+    ArrayRef<int64_t> outputShape = outputType.getShape();
+    Type elemType = input0Type.getElementType();
+    for (unsigned i = 0; i != input0Shape[0]; i++) {
+      SmallVector<int64_t> staticOffsets = {i, 0, 0};
+      SmallVector<int64_t> staticSizes = {1, input0Shape[1], input0Shape[2]};
+      SmallVector<int64_t> staticStrides = {1, 1, 1};
+      SmallVector<int64_t> resultShape = {input0Shape[1], input0Shape[2]};
+      SmallVector<int64_t> layout = {input0Shape[2], 1};
+      FailureOr<StridedLayoutAttr> computelayout =
+          StridedLayoutAttr::get(batchMatMulOp.getContext(),
+                                 i * input0Shape[1] * input0Shape[2], layout);
+      MemRefType resultType =
+          MemRefType::get(resultShape, elemType, *computelayout, 0);
+      Value subInput0 = rewriter.create<memref::SubViewOp>(
+          loc, resultType, input0, staticOffsets, staticSizes, staticStrides);
+
+      staticSizes.assign({1, input1Shape[1], input1Shape[2]});
+      resultShape.assign({input1Shape[1], input1Shape[2]});
+      layout.assign({input1Shape[2], 1});
+      computelayout =
+          StridedLayoutAttr::get(batchMatMulOp.getContext(),
+                                 i * input1Shape[1] * input1Shape[2], layout);
+      resultType = MemRefType::get(resultShape, elemType, *computelayout, 0);
+      Value subInput1 = rewriter.create<memref::SubViewOp>(
+          loc, resultType, input1, staticOffsets, staticSizes, staticStrides);
+
+      staticSizes.assign({1, outputShape[1], outputShape[2]});
+      resultShape.assign({outputShape[1], outputShape[2]});
+      layout.assign({outputShape[2], 1});
+      computelayout =
+          StridedLayoutAttr::get(batchMatMulOp.getContext(),
+                                 i * outputShape[1] * outputShape[2], layout);
+      resultType = MemRefType::get(resultShape, elemType, *computelayout, 0);
+      Value subOutput = rewriter.create<memref::SubViewOp>(
+          loc, resultType, output, staticOffsets, staticSizes, staticStrides);
+      SmallVector<Value> inputs = {subInput0, subInput1};
+      SmallVector<Value> output = {subOutput};
+      rewriter.create<linalg::MatmulOp>(batchMatMulOp.getLoc(), inputs, output);
+    }
+    rewriter.eraseOp(batchMatMulOp.getOperation());
+    return success();
+  }
 };
 
 } // namespace
 
-void populateLowerLinalgToBuckyBallConversionPatterns(RewritePatternSet &patterns,
-                                                    std::string accType) {
-  patterns.add<MatmulLowering>(patterns.getContext(), accType);
-  patterns.add<Conv2DNchwFchwLowering>(patterns.getContext(), accType);
-  patterns.add<Conv2DNhwcFhwcLowering>(patterns.getContext(), accType);
-  patterns.add<Conv2DNhwcHwcfLowering>(patterns.getContext(), accType);
+void populateLowerLinalgToBuckyBallConversionPatterns(RewritePatternSet &patterns) {
+  patterns.add<MatmulLowering>(patterns.getContext());
   patterns.add<BatchMatMulOpLowering>(patterns.getContext());
 }
 
@@ -102,9 +138,6 @@ public:
     return "convert linalg dialect to buckyball dialect";
   }
   void runOnOperation() override;
-  Option<std::string> accType{*this, "acc_t",
-                              llvm::cl::desc("The type of acc_t."),
-                              llvm::cl::init("i32")};
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<buckyball::BuckyBallDialect, func::FuncDialect,
                     memref::MemRefDialect, linalg::LinalgDialect,
@@ -117,11 +150,13 @@ void LowerLinalgToBuckyBallPass::runOnOperation() {
   MLIRContext *context = &getContext();
   ModuleOp module = getOperation();
   ConversionTarget target(*context);
-  target.addLegalDialect<memref::MemRefDialect, buckyball::BuckyBallDialect,
-                         arith::ArithDialect, scf::SCFDialect>();
+  target.addLegalDialect<memref::MemRefDialect, 
+                         buckyball::BuckyBallDialect,
+                         arith::ArithDialect, 
+                         scf::SCFDialect>();
   target.addLegalOp<linalg::FillOp, linalg::YieldOp>();
   RewritePatternSet patterns(context);
-  populateLowerLinalgToBuckyBallConversionPatterns(patterns, accType);
+  populateLowerLinalgToBuckyBallConversionPatterns(patterns);
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
 }

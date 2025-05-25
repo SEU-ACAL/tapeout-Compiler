@@ -41,7 +41,7 @@ void registerLowerDIPPass();
 void registerLowerGemminiPass();
 void registerLowerLinalgToGemminiPass();
 void registerLowerBuckyBallPass();
-// void registerLowerLinalgToBuckyBallPass();
+void registerLowerLinalgToBuckyBallPass();
 void registerLowerRVVPass();
 void registerLowerSchePass();
 void registerLowerVectorExpPass();
@@ -76,7 +76,7 @@ void mlir::buddy::registerAllPasses() {
   mlir::buddy::registerLowerGemminiPass();
   mlir::buddy::registerLowerLinalgToGemminiPass();
   mlir::buddy::registerLowerBuckyBallPass();
-  // mlir::buddy::registerLowerLinalgToBuckyBallPass();
+  mlir::buddy::registerLowerLinalgToBuckyBallPass();
   mlir::buddy::registerLowerRVVPass();
   mlir::buddy::registerLowerSchePass();
   mlir::buddy::registerLowerVectorExpPass();

@@ -81,6 +81,7 @@ void registerLowerVectorExpPass();
 void registerLowerGemminiPass();
 void registerLowerLinalgToGemminiPass();
 void registerLowerBuckyBallPass();
+void registerLowerLinalgToBuckyBallPass();
 void registerDeviceSchedulePass();
 void registerLowerSchePass();
 void registerFuncBufferizeDynamicOffsetPass();
@@ -113,7 +114,7 @@ int main(int argc, char **argv) {
   mlir::buddy::registerLowerGemminiPass();
   mlir::buddy::registerLowerLinalgToGemminiPass();
   mlir::buddy::registerLowerBuckyBallPass();
-
+  mlir::buddy::registerLowerLinalgToBuckyBallPass();
   // Register Several Optimize Pass.
   mlir::buddy::registerMatMulOptimizePass();
   mlir::buddy::registerBatchMatMulOptimizePass();

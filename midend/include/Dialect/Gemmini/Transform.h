@@ -52,7 +52,7 @@ using OwningRewritePatternList = RewritePatternSet;
 void populateGemminiLegalizeForLLVMExportPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns, int64_t dim,
     int64_t addrLen, int64_t accRows, int64_t bankRows, size_t sizeOfElemT,
-    size_t sizeOfAccT, bool VectorMode, bool RiscMode);
+    size_t sizeOfAccT, bool RiscMode);
 void configureGemminiLegalizeForExportTarget(LLVMConversionTarget &target);
 
 } // namespace mlir

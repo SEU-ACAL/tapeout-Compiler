@@ -93,31 +93,8 @@ let TargetPrefix = "riscv" in
 def int_riscv_loop_conv_ws_config6 : Intrinsic<[], [llvm_i64_ty, llvm_i64_ty], []>;
 
 // -----------------------------------------------------------------------------
-// Vector operations
+// BuckyBall operations
 // -----------------------------------------------------------------------------
-let TargetPrefix = "riscv" in 
-def int_riscv_vec_load : Intrinsic<[], [llvm_i64_ty, llvm_i64_ty], []>;
-
-let TargetPrefix = "riscv" in 
-def int_riscv_vec_store : Intrinsic<[], [llvm_i64_ty, llvm_i64_ty], []>;
-
-let TargetPrefix = "riscv" in 
-def int_riscv_vec_add : Intrinsic<[], [llvm_i64_ty, llvm_i64_ty], []>;
-
-let TargetPrefix = "riscv" in 
-def int_riscv_vec_scalar_mul : Intrinsic<[], [llvm_i64_ty, llvm_i64_ty], []>;
-
-let TargetPrefix = "riscv" in 
-def int_riscv_vec_broadcast : Intrinsic<[], [llvm_i64_ty, llvm_i64_ty], []>;
-
-let TargetPrefix = "riscv" in 
-def int_riscv_scalar_dispatch : Intrinsic<[], [llvm_i64_ty, llvm_i64_ty], []>;
-
-let TargetPrefix = "riscv" in 
-def int_riscv_vec_scatter : Intrinsic<[], [llvm_i64_ty, llvm_i64_ty], []>;
-
-let TargetPrefix = "riscv" in 
-def int_riscv_vec_misc_mul : Intrinsic<[], [llvm_i64_ty, llvm_i64_ty], []>;
 
 let TargetPrefix = "riscv" in 
 def int_riscv_bb_mul_warp16 : Intrinsic<[], [llvm_i64_ty, llvm_i64_ty], []>;

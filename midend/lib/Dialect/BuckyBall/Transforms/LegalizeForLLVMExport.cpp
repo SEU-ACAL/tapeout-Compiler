@@ -280,6 +280,9 @@ private:
   int64_t addrLen;
 };
 
+//===----------------------------------------------------------------------===//
+// Warp-level Ops
+//===----------------------------------------------------------------------===//
 struct BuckyBallVecMulWarp16Lowering : public ConvertOpToLLVMPattern<VecMulWarp16Op> {
   using ConvertOpToLLVMPattern<VecMulWarp16Op>::ConvertOpToLLVMPattern;
   explicit BuckyBallVecMulWarp16Lowering(LLVMTypeConverter &typeConverter,
@@ -293,23 +296,19 @@ struct BuckyBallVecMulWarp16Lowering : public ConvertOpToLLVMPattern<VecMulWarp1
     Value bSpAddr = vecMulWarp16Op.getBSpAddr();
     Value cSpAddr = vecMulWarp16Op.getCSpAddr();
     Value nLen = vecMulWarp16Op.getNLen();
-    
     // aSpAddr << addrLen
     Value shift1 = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getI64IntegerAttr(addrLen));
     aSpAddr = rewriter.create<arith::ShLIOp>(loc, aSpAddr, shift1);
-
     // nLen << (2 * addrLen)
     Value shift2 = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getI64IntegerAttr(2 * addrLen));    
     nLen = rewriter.create<arith::ShLIOp>(loc, nLen, shift2);
-    
     // rs1 = nLen << (2 * addrLen) | aSpAddr << addrLen | bSpAddr
     // rs2 = cSpAddr
     Value rs1 = rewriter.create<arith::OrIOp>(loc, nLen, 
         rewriter.create<arith::OrIOp>(loc, aSpAddr, bSpAddr));
     Value rs2 = cSpAddr;
-    
     rewriter.replaceOpWithNewOp<VecMulWarp16_IntrOp>(vecMulWarp16Op, rs1, rs2);
     return success();
   }

@@ -307,7 +307,7 @@ void LowerGemminiToLLVMPass::runOnOperation() {
   populateGemminiLegalizeForLLVMExportPatterns(converter, patterns, dim,
                                                addrLen, accRows, bankRows,
                                                sizeOfElemT, sizeOfAccT,
-                                               VectorMode, RiscMode);
+                                               RiscMode);
   populateAffineToStdConversionPatterns(patterns);
   populateSCFToControlFlowConversionPatterns(patterns);
   mlir::arith::populateArithToLLVMConversionPatterns(converter, patterns);
