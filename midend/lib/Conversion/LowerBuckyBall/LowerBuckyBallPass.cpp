@@ -43,9 +43,9 @@
 using namespace mlir;
 using namespace buddy;
 
-class PrintOpLowering : public ConversionPattern {
+class BBPrintOpLowering : public ConversionPattern {
 public:
-  explicit PrintOpLowering(MLIRContext *context)
+  explicit BBPrintOpLowering(MLIRContext *context)
       : ConversionPattern(buckyball::PrintOp::getOperationName(), 1, context) {}
 
   LogicalResult
@@ -151,9 +151,9 @@ private:
   }
 };
 
-class PrintScalarOpLowering : public ConversionPattern {
+class BBPrintScalarOpLowering : public ConversionPattern {
 public:
-  explicit PrintScalarOpLowering(MLIRContext *context)
+  explicit BBPrintScalarOpLowering(MLIRContext *context)
       : ConversionPattern(buckyball::PrintScalarOp::getOperationName(), 1, context) {}
 
   LogicalResult
@@ -314,8 +314,8 @@ void LowerBuckyBallToLLVMPass::runOnOperation() {
   populateFinalizeMemRefToLLVMConversionPatterns(converter, patterns);
   cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
   populateFuncToLLVMConversionPatterns(converter, patterns);
-  patterns.add<PrintOpLowering>(&getContext());
-  patterns.add<PrintScalarOpLowering>(&getContext());
+  patterns.add<BBPrintOpLowering>(&getContext());
+  patterns.add<BBPrintScalarOpLowering>(&getContext());
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
 }

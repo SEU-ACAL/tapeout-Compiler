@@ -935,6 +935,182 @@ private:
   int64_t warp;
 };
 
+//===----------------------------------------------------------------------===//
+// Sparse Ops
+//===----------------------------------------------------------------------===//
+// struct BuckyBallCSRtoResidueLowering : public ConvertOpToLLVMPattern<CSRtoResidueOp> {
+//   using ConvertOpToLLVMPattern<CSRtoResidueOp>::ConvertOpToLLVMPattern;
+//   explicit BuckyBallCSRtoResidueLowering(LLVMTypeConverter &typeConverter, int64_t addrLen)
+//     	: ConvertOpToLLVMPattern<CSRtoResidueOp>(typeConverter), addrLen(addrLen) {}
+//   LogicalResult
+//   matchAndRewrite(CSRtoResidueOp csrtoResidueOp, typename CSRtoResidueOp::Adaptor adaptor,
+//                   ConversionPatternRewriter &rewriter) const override {
+//   	Location loc = csrtoResidueOp.getLoc();
+//   	Value csrRowPtrSpAddr = csrtoResidueOp.getCsrRowPtrSpAddr();
+//   	Value csrColIdxSpAddr = csrtoResidueOp.getCsrColIdxSpAddr();
+//   	Value residueArraySpAddr = csrtoResidueOp.getResidueArraySpAddr();
+//   	Value iterNum = csrtoResidueOp.getIterNum();
+
+// 		Value shift1 = rewriter.create<arith::ConstantOp>(loc, rewriter.getI64IntegerAttr(addrLen));
+// 		csrRowPtrSpAddr = rewriter.create<arith::ShLIOp>(loc, csrRowPtrSpAddr, shift1);
+// 		iterNum = rewriter.create<arith::ShLIOp>(loc, iterNum, shift1);
+// 		// rs1 = csrRowPtrSpAddr << addrLen | csrColIdxSpAddr
+// 		// rs2 = iterNum << addrLen | residueArraySpAddr
+//   	Value rs1 = rewriter.create<arith::OrIOp>(loc, csrRowPtrSpAddr, csrColIdxSpAddr);
+//   	Value rs2 = rewriter.create<arith::OrIOp>(loc, iterNum, residueArraySpAddr);
+//   	rewriter.replaceOpWithNewOp<CSRtoResidue_IntrOp>(csrtoResidueOp, rs1, rs2);
+//   	return success();
+//   }
+// private:
+//   int64_t addrLen;
+// };
+
+// class BuckyBallSparseMergeTileMatMulLowering : public ConvertOpToLLVMPattern<SparseMergeTileMatMulOp> {
+// public:
+//   using ConvertOpToLLVMPattern<SparseMergeTileMatMulOp>::ConvertOpToLLVMPattern;
+//   explicit BuckyBallSparseMergeTileMatMulLowering(LLVMTypeConverter &typeConverter)
+//       : ConvertOpToLLVMPattern(typeConverter) {}
+
+//   LogicalResult
+//   matchAndRewrite(SparseMergeTileMatMulOp sparseMergeTileMatMulOp, OpAdaptor adaptor,
+//                   ConversionPatternRewriter &rewriter) const override {
+
+//     return success();
+//   }
+// private:
+// };
+
+
+// class BuckyBallVecSparseTileMatMulLowering : public ConvertOpToLLVMPattern<VecSparseTileMatMulOp> {
+// public:
+//   using ConvertOpToLLVMPattern<VecSparseTileMatMulOp>::ConvertOpToLLVMPattern;
+//   explicit BuckyBallVecSparseTileMatMulLowering(LLVMTypeConverter &typeConverter, size_t sizeOfElemT)
+//       : ConvertOpToLLVMPattern(typeConverter), sizeOfElemT(sizeOfElemT) {}
+
+//   LogicalResult
+//   matchAndRewrite(VecSparseTileMatMulOp vecSparseTileMatMulOp, OpAdaptor adaptor,
+//                   ConversionPatternRewriter &rewriter) const override {
+
+//   Location loc = vecSparseTileMatMulOp.getLoc();
+//   Value csrValue  = vecSparseTileMatMulOp.getCsrValue();
+//   Value csrRowPtr = vecSparseTileMatMulOp.getCsrRowPtr();
+//   Value csrColIdx = vecSparseTileMatMulOp.getCsrColIdx();
+//   Value bMemArray = vecSparseTileMatMulOp.getBMemArray();
+//   Value cMemArray = vecSparseTileMatMulOp.getCMemArray();
+
+//   MemRefType csrValueType = dyn_cast<MemRefType>(csrValue.getType());
+//   MemRefType csrRowPtrType = dyn_cast<MemRefType>(csrRowPtr.getType());
+//   MemRefType csrColIdxType = dyn_cast<MemRefType>(csrColIdx.getType());
+//   MemRefType bMemArrayType = dyn_cast<MemRefType>(bMemArray.getType());
+//   MemRefType cMemArrayType = dyn_cast<MemRefType>(cMemArray.getType());
+
+//   StridedLayoutAttr csrValueTypeLayout = dyn_cast<StridedLayoutAttr>(csrValueType.getLayout());
+//   StridedLayoutAttr csrRowPtrTypeLayout = dyn_cast<StridedLayoutAttr>(csrRowPtrType.getLayout());
+//   StridedLayoutAttr csrColIdxTypeLayout = dyn_cast<StridedLayoutAttr>(csrColIdxType.getLayout());
+//   StridedLayoutAttr bMemArrayTypeLayout = dyn_cast<StridedLayoutAttr>(bMemArrayType.getLayout());
+//   StridedLayoutAttr cMemArrayTypeLayout = dyn_cast<StridedLayoutAttr>(cMemArrayType.getLayout());
+
+//   SmallVector<Type> resultType = {rewriter.getIndexType()};
+//   TypeRange typeRange(resultType);
+
+//   IntegerType i64Type = rewriter.getI64Type();
+
+//   // Convert csrValue, csrRowPtr, csrColIdx, bMemArray, cMemArray to ArrayindexCast 
+
+//   Value csrValueExtractOp =
+//       rewriter.create<memref::ExtractAlignedPointerAsIndexOp>(loc, typeRange, csrValue);
+//   if (csrValueTypeLayout) {
+//     Value offset = rewriter.create<arith::ConstantIndexOp>(
+//         loc, csrValueTypeLayout.getOffset() * sizeOfElemT);
+//     csrValueExtractOp =
+//         rewriter.create<arith::AddIOp>(loc, csrValueExtractOp, offset);
+//   }
+//   Value csrValueindexCastOp =
+//       rewriter.create<arith::IndexCastOp>(loc, i64Type, csrValueExtractOp);
+  
+//   Value csrRowPtrExtractOp =
+//       rewriter.create<memref::ExtractAlignedPointerAsIndexOp>(loc, typeRange, csrRowPtr);
+//   if (csrRowPtrTypeLayout) {
+//     Value offset = rewriter.create<arith::ConstantIndexOp>(
+//         loc, csrRowPtrTypeLayout.getOffset() * sizeOfElemT);
+//     csrRowPtrExtractOp =
+//         rewriter.create<arith::AddIOp>(loc, csrRowPtrExtractOp, offset);
+//   }
+//   Value csrRowPtrindexCastOp =
+//       rewriter.create<arith::IndexCastOp>(loc, i64Type, csrRowPtrExtractOp);
+
+//   Value csrColIdxExtractOp =
+//       rewriter.create<memref::ExtractAlignedPointerAsIndexOp>(loc, typeRange, csrColIdx);
+//   if (csrColIdxTypeLayout) {
+//     Value offset = rewriter.create<arith::ConstantIndexOp>(
+//         loc, csrColIdxTypeLayout.getOffset() * sizeOfElemT);
+//     csrColIdxExtractOp =
+//         rewriter.create<arith::AddIOp>(loc, csrColIdxExtractOp, offset);
+//   }
+//   Value csrColIdxindexCastOp =
+//       rewriter.create<arith::IndexCastOp>(loc, i64Type, csrColIdxExtractOp);
+
+//   Value bMemArrayExtractOp =
+//       rewriter.create<memref::ExtractAlignedPointerAsIndexOp>(loc, typeRange, bMemArray);
+//   if (bMemArrayTypeLayout) {
+//     Value offset = rewriter.create<arith::ConstantIndexOp>(
+//         loc, bMemArrayTypeLayout.getOffset() * sizeOfElemT);
+//     bMemArrayExtractOp =
+//         rewriter.create<arith::AddIOp>(loc, bMemArrayExtractOp, offset);
+//   }
+//   Value bMemArrayindexCastOp =
+//       rewriter.create<arith::IndexCastOp>(loc, i64Type, bMemArrayExtractOp);
+
+//   Value cMemArrayExtractOp =
+//       rewriter.create<memref::ExtractAlignedPointerAsIndexOp>(loc, typeRange, cMemArray);
+//   if (cMemArrayTypeLayout) {
+//     Value offset = rewriter.create<arith::ConstantIndexOp>(
+//         loc, cMemArrayTypeLayout.getOffset() * sizeOfElemT);
+//     cMemArrayExtractOp =
+//         rewriter.create<arith::AddIOp>(loc, cMemArrayExtractOp, offset);
+//   }
+//   Value cMemArrayindexCastOp =
+//       rewriter.create<arith::IndexCastOp>(loc, i64Type, cMemArrayExtractOp);
+
+//   // Get A, B, C Matrix's shape, A[M][K], B[K][N], C[M][N]
+//   Value NNZ = rewriter.create<memref::DimOp>(loc, csrValue, 0);
+// 	Value M = rewriter.create<memref::DimOp>(loc, bMemArray, 0);
+// 	Value K = rewriter.create<memref::DimOp>(loc, bMemArray, 1);
+// 	Value N = rewriter.create<memref::DimOp>(loc, cMemArray, 1);
+
+// // Loop K
+// // step 1: merge metatiles into merge tiles. cscColptr
+// // csr -> rowptr[i+16] - rowptr[i] = NNZ[i] 每16列的非零元素个数
+// // csr -> rowptr[i+1] - rowptr[i] = NNZ[i] 每16列的非零元素个数
+
+//   Operation *loopOp = nullptr;
+//   Value lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+//   Value upperBound = rewriter.create<arith::IndexCastOp>(loc, rewriter.getIndexType(), metaKNum);
+//   Value step = rewriter.create<arith::ConstantIndexOp>(loc, 1);    
+//   auto kLoop = rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
+//   loopOp = kLoop.getOperation();
+//   rewriter.setInsertionPointToStart(kLoop.getBody());
+
+//   rewriter.setInsertionPointAfter(loopOp);
+
+// // step 2: longest-first
+
+// // step 3: mvinA(cscRowIdx), mvinA(cscValue)
+
+// // step 4: mvinB
+
+// // step 5: vecMatMulWarp16
+
+// // step 6: mvout
+
+//   return success();
+// }
+// private:
+//   size_t sizeOfElemT;
+// };
+
+
+
 
 void mlir::populateBuckyBallLegalizeForLLVMExportPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns, int64_t dim,
@@ -953,18 +1129,21 @@ void mlir::populateBuckyBallLegalizeForLLVMExportPatterns(
   patterns.add<BuckyBallMergeTileMatMulLowering>(converter);
   patterns.add<BuckyBallVecTileMatMulLowering>(converter, dim, 
       addrLen, spadRows, accRows, sizeOfElemT, sizeOfAccT, warp, lane);
+  // patterns.add<BuckyBallVecSparseTileMatMulLowering>(converter, sizeOfElemT);
+  // patterns.add<BuckyBallCSRtoResidueLowering>(converter, addrLen);
+  // patterns.add<BuckyBallSparseMergeTileMatMulLowering>(converter, sizeOfElemT);	
 }
 
 void mlir::configureBuckyBallLegalizeForExportTarget(
     LLVMConversionTarget &target) {
-  target.addLegalDialect<arith::ArithDialect,
-                         scf::SCFDialect, 
-                         memref::MemRefDialect,
-                         BuckyBallDialect,
-                         LLVM::LLVMDialect>();
+//   target.addLegalDialect<arith::ArithDialect,
+//                          scf::SCFDialect, 
+//                          memref::MemRefDialect,
+//                          BuckyBallDialect,
+//                          LLVM::LLVMDialect>();
   target.addLegalOp<Flush_IntrOp, Mvin_IntrOp, Mvin2_IntrOp, Mvin3_IntrOp, 
                     Mvout_IntrOp, VecMulWarp16_IntrOp>();
   target.addIllegalOp<FlushOp, MvinOp, Mvin2Op, Mvin3Op, MvoutOp, 
-                      PrintOp, PrintScalarOp, VecTileMatMulOp, MergeTileMatMulOp, 
-                      MetaTileMatMulOp, VecMulWarp16Op>();
+                      VecTileMatMulOp, MergeTileMatMulOp, 
+                      MetaTileMatMulOp, VecMulWarp16Op, PrintOp, PrintScalarOp>();
 }

@@ -152,6 +152,33 @@ def VecMulWarp16Op : BuckyBall_Op<"bb_mul_warp16"> {
 //     type($inputArray) type($outputArray) }];
 // }
 
+// def VecSparseTileMatMulOp : BuckyBall_Op<"bb_sparse_tile_matmul"> {
+//   let summary = "Vector sparse matrix multiplication";
+//   let description = [{
+//     Perform sparse matrix multiplication operation in vector unit.
+//   }];
+//   let arguments = (ins MemRefRankOf<[AnyType], [1]>:$csrValue,
+//                        MemRefRankOf<[AnyType], [1]>:$csrRowPtr,
+//                        MemRefRankOf<[AnyType], [1]>:$csrColIdx,
+//                        MemRefRankOf<[AnyType], [2]>:$bMemArray,
+//                        MemRefRankOf<[AnyType], [2]>:$cMemArray);
+//   let assemblyFormat = [{$csrValue $csrRowPtr $csrColIdx $bMemArray $cMemArray attr-dict `:` 
+//     type($csrValue) type($csrRowPtr) type($csrColIdx) type($bMemArray) type($cMemArray)}];
+// }
+
+// def CSRtoResidueOp : BuckyBall_Op<"bb_csr_to_residue"> {
+//   let summary = "Convert CSR to residue";
+//   let description = [{
+//     Convert CSR to residue.
+//   }];
+//   let arguments = (ins I64:$csrRowPtrSpAddr, 
+//                        I64:$csrColIdxSpAddr,
+//                        I64:$residueArraySpAddr,
+//                        I64:$iterNum);
+//   let assemblyFormat = [{$csrRowPtrSpAddr $csrColIdxSpAddr $residueArraySpAddr $iterNum attr-dict `:` 
+//     type($csrRowPtrSpAddr) type($csrColIdxSpAddr) type($residueArraySpAddr) type($iterNum)}];
+// }
+
 def FlushOp : BuckyBall_Op<"flush"> {
   let summary = "Flush op";
   let description = [{
@@ -256,6 +283,9 @@ def BuckyBall_Mvout_IntrOp : BuckyBall_IntrOpBase<"mvout">,
 
 def BuckyBall_VecMulWarp16_IntrOp : BuckyBall_IntrOpBase<"bb_mul_warp16">,
   Arguments<(ins LLVM_Type, LLVM_Type)>;
+
+// def BuckyBall_CSRtoResidue_IntrOp : BuckyBall_IntrOpBase<"bb_csr_to_residue">,
+//   Arguments<(ins LLVM_Type, LLVM_Type)>;
 
 // def BuckyBall_VecTrans_IntrOp : BuckyBall_IntrOpBase<"vec_trans">,
 //   Arguments<(ins LLVM_Type, LLVM_Type)>;
