@@ -130,10 +130,10 @@ struct BuckyBallMvinLowering : public ConvertOpToLLVMPattern<MvinOp> {
     col = rewriter.create<arith::ShLIOp>(loc, col, shift1);
 
     // rs1 = indexCastOp
-    // rs2 = row << (2 * addrLen) | col << addrLen | spadAddrValue
+    // rs2 = col << (2 * addrLen) | row << addrLen | spadAddrValue
     Value rs1 = indexCastOp;
-    Value rs2 = rewriter.create<arith::OrIOp>(loc, row, 
-        rewriter.create<arith::OrIOp>(loc, col, spadAddrValue));
+    Value rs2 = rewriter.create<arith::OrIOp>(loc, col, 
+        rewriter.create<arith::OrIOp>(loc, row, spadAddrValue));
     
     rewriter.replaceOpWithNewOp<Mvin_IntrOp>(mvinOp, rs1, rs2);
     return success();
@@ -178,8 +178,8 @@ struct BuckyBallMvin2Lowering : public ConvertOpToLLVMPattern<Mvin2Op> {
     col = rewriter.create<arith::ShLIOp>(loc, col, shift1);
     
     Value rs1 = indexCastOp;
-    Value rs2 = rewriter.create<arith::OrIOp>(loc, row, 
-        rewriter.create<arith::OrIOp>(loc, col, spadAddrValue));
+    Value rs2 = rewriter.create<arith::OrIOp>(loc, col, 
+        rewriter.create<arith::OrIOp>(loc, row, spadAddrValue));
     
     rewriter.replaceOpWithNewOp<Mvin2_IntrOp>(mvin2Op, rs1, rs2);
     return success();
@@ -224,8 +224,8 @@ struct BuckyBallMvin3Lowering : public ConvertOpToLLVMPattern<Mvin3Op> {
     col = rewriter.create<arith::ShLIOp>(loc, col, shift1);
     
     Value rs1 = indexCastOp;
-    Value rs2 = rewriter.create<arith::OrIOp>(loc, row, 
-        rewriter.create<arith::OrIOp>(loc, col, spadAddrValue));
+    Value rs2 = rewriter.create<arith::OrIOp>(loc, col, 
+        rewriter.create<arith::OrIOp>(loc, row, spadAddrValue));
 
     rewriter.replaceOpWithNewOp<Mvin3_IntrOp>(mvin3Op, rs1, rs2);
     return success();
@@ -268,10 +268,10 @@ struct BuckyBallMvoutLowering : public ConvertOpToLLVMPattern<MvoutOp> {
     col = rewriter.create<arith::ShLIOp>(loc, col, shift1);
     
     // rs1 = indexCastOp
-    // rs2 = row << (2 * addrLen) | col << addrLen | spadAddrValue
+    // rs2 = col << (2 * addrLen) | row << addrLen | spadAddrValue
     Value rs1 = indexCastOp;
-    Value rs2 = rewriter.create<arith::OrIOp>(loc, row, 
-        rewriter.create<arith::OrIOp>(loc, col, spadAddrValue));
+    Value rs2 = rewriter.create<arith::OrIOp>(loc, col, 
+        rewriter.create<arith::OrIOp>(loc, row, spadAddrValue));
     rewriter.replaceOpWithNewOp<Mvout_IntrOp>(mvoutOp, rs1, rs2);
     return success();
   }
@@ -304,11 +304,10 @@ struct BuckyBallVecMulWarp16Lowering : public ConvertOpToLLVMPattern<VecMulWarp1
     Value shift2 = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getI64IntegerAttr(2 * addrLen));    
     nLen = rewriter.create<arith::ShLIOp>(loc, nLen, shift2);
-    // rs1 = nLen << (2 * addrLen) | aSpAddr << addrLen | bSpAddr
-    // rs2 = cSpAddr
-    Value rs1 = rewriter.create<arith::OrIOp>(loc, nLen, 
-        rewriter.create<arith::OrIOp>(loc, aSpAddr, bSpAddr));
-    Value rs2 = cSpAddr;
+    // rs1 = aSpAddr << addrLen | bSpAddr
+    // rs2 = nLen << addrLen | cSpAddr
+    Value rs1 = rewriter.create<arith::OrIOp>(loc, aSpAddr, bSpAddr);
+    Value rs2 = rewriter.create<arith::OrIOp>(loc, nLen, cSpAddr);
     rewriter.replaceOpWithNewOp<VecMulWarp16_IntrOp>(vecMulWarp16Op, rs1, rs2);
     return success();
   }
