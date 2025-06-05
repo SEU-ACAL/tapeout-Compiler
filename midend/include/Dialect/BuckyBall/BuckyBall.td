@@ -190,7 +190,7 @@ def FlushOp : BuckyBall_Op<"flush"> {
   let assemblyFormat = "$skip attr-dict `:` type($skip)";
 }
 
-def MvinOp : BuckyBall_Op<"mvin"> {
+def MvinOp : BuckyBall_Op<"bb_mvin"> {
   let summary = "Load operation";
   let description = [{
     Move data from main memory to scratchpad
@@ -202,33 +202,33 @@ def MvinOp : BuckyBall_Op<"mvin"> {
   let assemblyFormat = "$input $addr attr-dict `:` type($input) type($addr)";
 }
 
-def Mvin2Op : BuckyBall_Op<"mvin2"> {
-  let summary = "Load operation";
-  let description = [{
-      Similar to Mvin
-          Move data from main memory to scratchpad
-      - MemRef to load in.
-        (including DRAM address, number of columns, number of rows)
-      - Local scratchpad or accumulator address.
-  }];
-  let arguments = (ins MemRefRankOf<[AnyType], [2]>:$input, I64:$addr);
-  let assemblyFormat = "$input $addr attr-dict `:` type($input) type($addr)";
-}
+// def Mvin2Op : BuckyBall_Op<"mvin2"> {
+//   let summary = "Load operation";
+//   let description = [{
+//       Similar to Mvin
+//           Move data from main memory to scratchpad
+//       - MemRef to load in.
+//         (including DRAM address, number of columns, number of rows)
+//       - Local scratchpad or accumulator address.
+//   }];
+//   let arguments = (ins MemRefRankOf<[AnyType], [2]>:$input, I64:$addr);
+//   let assemblyFormat = "$input $addr attr-dict `:` type($input) type($addr)";
+// }
 
-def Mvin3Op : BuckyBall_Op<"mvin3"> {
-  let summary = "Load operation";
-  let description = [{
-      Similar to Mvin and Mvin2
-          Move data from main memory to scratchpad
-      - MemRef to load in.
-        (including DRAM address, number of columns, number of rows)
-      - Local scratchpad or accumulator address.
-  }];
-  let arguments = (ins MemRefRankOf<[AnyType], [2]>:$input, I64:$addr);
-  let assemblyFormat = "$input $addr attr-dict `:` type($input) type($addr)";
-}
+// def Mvin3Op : BuckyBall_Op<"mvin3"> {
+//   let summary = "Load operation";
+//   let description = [{
+//       Similar to Mvin and Mvin2
+//           Move data from main memory to scratchpad
+//       - MemRef to load in.
+//         (including DRAM address, number of columns, number of rows)
+//       - Local scratchpad or accumulator address.
+//   }];
+//   let arguments = (ins MemRefRankOf<[AnyType], [2]>:$input, I64:$addr);
+//   let assemblyFormat = "$input $addr attr-dict `:` type($input) type($addr)";
+// }
 
-def MvoutOp : BuckyBall_Op<"mvout"> {
+def MvoutOp : BuckyBall_Op<"bb_mvout"> {
   let summary = "Store operation";
   let description = [{
     Move data from scratchpad to L2/DRAM
@@ -269,16 +269,16 @@ class BuckyBall_IntrOpBase<string mnemonic, list<Trait> traits = []> :
 def BuckyBall_Flush_IntrOp : BuckyBall_IntrOpBase<"flush">,
   Arguments<(ins LLVM_Type, LLVM_Type)>;
 
-def BuckyBall_Mvin_IntrOp : BuckyBall_IntrOpBase<"mvin">,
+def BuckyBall_Mvin_IntrOp : BuckyBall_IntrOpBase<"bb_mvin">,
   Arguments<(ins LLVM_Type, LLVM_Type)>;
 
-def BuckyBall_Mvin2_IntrOp : BuckyBall_IntrOpBase<"mvin2">,
-  Arguments<(ins LLVM_Type, LLVM_Type)>;
+// def BuckyBall_Mvin2_IntrOp : BuckyBall_IntrOpBase<"mvin2">,
+//   Arguments<(ins LLVM_Type, LLVM_Type)>;
 
-def BuckyBall_Mvin3_IntrOp : BuckyBall_IntrOpBase<"mvin3">,
-  Arguments<(ins LLVM_Type, LLVM_Type)>;
+// def BuckyBall_Mvin3_IntrOp : BuckyBall_IntrOpBase<"mvin3">,
+//   Arguments<(ins LLVM_Type, LLVM_Type)>;
 
-def BuckyBall_Mvout_IntrOp : BuckyBall_IntrOpBase<"mvout">,
+def BuckyBall_Mvout_IntrOp : BuckyBall_IntrOpBase<"bb_mvout">,
   Arguments<(ins LLVM_Type, LLVM_Type)>;
 
 def BuckyBall_VecMulWarp16_IntrOp : BuckyBall_IntrOpBase<"bb_mul_warp16">,

@@ -91,8 +91,8 @@ struct BuckyBallFlushLowering : public ConvertOpToLLVMPattern<FlushOp> {
 struct BuckyBallMvinLowering : public ConvertOpToLLVMPattern<MvinOp> {
   using ConvertOpToLLVMPattern<MvinOp>::ConvertOpToLLVMPattern;
   explicit BuckyBallMvinLowering(LLVMTypeConverter &typeConverter,
-                               int64_t addrLen)
-      : ConvertOpToLLVMPattern(typeConverter), addrLen(addrLen) {}
+                               int64_t spAddrLen)
+      : ConvertOpToLLVMPattern(typeConverter), spAddrLen(spAddrLen) {}
   LogicalResult
   matchAndRewrite(MvinOp mvinOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -115,131 +115,37 @@ struct BuckyBallMvinLowering : public ConvertOpToLLVMPattern<MvinOp> {
     // Value c0 = rewriter.create<arith::ConstantIndexOp>(loc, 0);
     // Value c1 = rewriter.create<arith::ConstantIndexOp>(loc, 1);
     Value row = rewriter.create<memref::DimOp>(loc, input, 0);
-    Value col = rewriter.create<memref::DimOp>(loc, input, 1);
+    // Value col = rewriter.create<memref::DimOp>(loc, input, 1);
     
     // cast index to i64
     row = rewriter.create<arith::IndexCastOp>(loc, i64Type, row);
-    col = rewriter.create<arith::IndexCastOp>(loc, i64Type, col);
+    // col = rewriter.create<arith::IndexCastOp>(loc, i64Type, col);
     
     Value shift1 = rewriter.create<arith::ConstantOp>(
-        loc, i64Type, rewriter.getI64IntegerAttr(addrLen));
-    Value shift2 = rewriter.create<arith::ConstantOp>(
-        loc, i64Type, rewriter.getI64IntegerAttr(2 * addrLen));
+        loc, i64Type, rewriter.getI64IntegerAttr(spAddrLen));
+    // Value shift2 = rewriter.create<arith::ConstantOp>(
+    //     loc, i64Type, rewriter.getI64IntegerAttr(2 * spAddrLen));
     
-    row = rewriter.create<arith::ShLIOp>(loc, row, shift2);
-    col = rewriter.create<arith::ShLIOp>(loc, col, shift1);
+    row = rewriter.create<arith::ShLIOp>(loc, row, shift1);
+    // col = rewriter.create<arith::ShLIOp>(loc, col, shift2);
 
     // rs1 = indexCastOp
-    // rs2 = col << (2 * addrLen) | row << addrLen | spadAddrValue
+    // rs2 = row << spAddrLen | spadAddrValue
     Value rs1 = indexCastOp;
-    Value rs2 = rewriter.create<arith::OrIOp>(loc, col, 
-        rewriter.create<arith::OrIOp>(loc, row, spadAddrValue));
-    
+    Value rs2 = rewriter.create<arith::OrIOp>(loc, row, spadAddrValue);
+
     rewriter.replaceOpWithNewOp<Mvin_IntrOp>(mvinOp, rs1, rs2);
     return success();
   }
 
 private:
-  int64_t addrLen;
+  int64_t spAddrLen;
 };
-
-struct BuckyBallMvin2Lowering : public ConvertOpToLLVMPattern<Mvin2Op> {
-  using ConvertOpToLLVMPattern<Mvin2Op>::ConvertOpToLLVMPattern;
-  explicit BuckyBallMvin2Lowering(LLVMTypeConverter &typeConverter,
-                                int64_t addrLen)
-      : ConvertOpToLLVMPattern(typeConverter), addrLen(addrLen) {}
-  LogicalResult
-  matchAndRewrite(Mvin2Op mvin2Op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    Value input = mvin2Op.getInput();
-    Location loc = input.getLoc();
-    MemRefType memRefType = dyn_cast<MemRefType>(mvin2Op.getOperandTypes().front());
-    llvm::ArrayRef<int64_t> memRefShape = memRefType.getShape();
-    TypeRange resultType = mlir::TypeRange(rewriter.getIndexType());
-    Value extractOp = rewriter.create<memref::ExtractAlignedPointerAsIndexOp>(
-        loc, resultType, input);
-    IntegerType i64Type = rewriter.getI64Type();
-    Value indexCastOp =
-        rewriter.create<arith::IndexCastOp>(loc, i64Type, extractOp);
-
-    Value spadAddrValue = mvin2Op.getAddr();
-    Value row = rewriter.create<memref::DimOp>(loc, input, 0);
-    Value col = rewriter.create<memref::DimOp>(loc, input, 1);
-    
-    row = rewriter.create<arith::IndexCastOp>(loc, i64Type, row);
-    col = rewriter.create<arith::IndexCastOp>(loc, i64Type, col);
-    
-    Value shift1 = rewriter.create<arith::ConstantOp>(
-        loc, i64Type, rewriter.getI64IntegerAttr(addrLen));
-    Value shift2 = rewriter.create<arith::ConstantOp>(
-        loc, i64Type, rewriter.getI64IntegerAttr(2 * addrLen));
-    
-    row = rewriter.create<arith::ShLIOp>(loc, row, shift2);
-    col = rewriter.create<arith::ShLIOp>(loc, col, shift1);
-    
-    Value rs1 = indexCastOp;
-    Value rs2 = rewriter.create<arith::OrIOp>(loc, col, 
-        rewriter.create<arith::OrIOp>(loc, row, spadAddrValue));
-    
-    rewriter.replaceOpWithNewOp<Mvin2_IntrOp>(mvin2Op, rs1, rs2);
-    return success();
-  }
-
-private:
-  int64_t addrLen;
-};
-
-struct BuckyBallMvin3Lowering : public ConvertOpToLLVMPattern<Mvin3Op> {
-  using ConvertOpToLLVMPattern<Mvin3Op>::ConvertOpToLLVMPattern;
-  explicit BuckyBallMvin3Lowering(LLVMTypeConverter &typeConverter,
-                                int64_t addrLen)
-      : ConvertOpToLLVMPattern(typeConverter), addrLen(addrLen) {}
-  LogicalResult
-  matchAndRewrite(Mvin3Op mvin3Op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    Value input = mvin3Op.getInput();
-    Location loc = input.getLoc();
-    MemRefType memRefType = dyn_cast<MemRefType>(mvin3Op.getOperandTypes().front());
-    llvm::ArrayRef<int64_t> memRefShape = memRefType.getShape();
-    TypeRange resultType = mlir::TypeRange(rewriter.getIndexType());
-    Value extractOp = rewriter.create<memref::ExtractAlignedPointerAsIndexOp>(
-        loc, resultType, input);
-    IntegerType i64Type = rewriter.getI64Type();
-    Value indexCastOp =
-        rewriter.create<arith::IndexCastOp>(loc, i64Type, extractOp);
-
-    Value spadAddrValue = mvin3Op.getAddr();
-    Value row = rewriter.create<memref::DimOp>(loc, input, 0);
-    Value col = rewriter.create<memref::DimOp>(loc, input, 1);
-    
-    row = rewriter.create<arith::IndexCastOp>(loc, i64Type, row);
-    col = rewriter.create<arith::IndexCastOp>(loc, i64Type, col);
-    
-    Value shift1 = rewriter.create<arith::ConstantOp>(
-        loc, i64Type, rewriter.getI64IntegerAttr(addrLen));
-    Value shift2 = rewriter.create<arith::ConstantOp>(
-        loc, i64Type, rewriter.getI64IntegerAttr(2 * addrLen));
-    
-    row = rewriter.create<arith::ShLIOp>(loc, row, shift2);
-    col = rewriter.create<arith::ShLIOp>(loc, col, shift1);
-    
-    Value rs1 = indexCastOp;
-    Value rs2 = rewriter.create<arith::OrIOp>(loc, col, 
-        rewriter.create<arith::OrIOp>(loc, row, spadAddrValue));
-
-    rewriter.replaceOpWithNewOp<Mvin3_IntrOp>(mvin3Op, rs1, rs2);
-    return success();
-  }
-
-private:
-  int64_t addrLen;
-};
-
 struct BuckyBallMvoutLowering : public ConvertOpToLLVMPattern<MvoutOp> {
   using ConvertOpToLLVMPattern<MvoutOp>::ConvertOpToLLVMPattern;
   explicit BuckyBallMvoutLowering(LLVMTypeConverter &typeConverter,
-                                int64_t addrLen)
-      : ConvertOpToLLVMPattern(typeConverter), addrLen(addrLen) {}
+                                int64_t spAddrLen)
+      : ConvertOpToLLVMPattern(typeConverter), spAddrLen(spAddrLen) {}
   LogicalResult
   matchAndRewrite(MvoutOp mvoutOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -256,28 +162,27 @@ struct BuckyBallMvoutLowering : public ConvertOpToLLVMPattern<MvoutOp> {
 
     Value spadAddrValue = mvoutOp.getAddr();
     Value row = rewriter.create<memref::DimOp>(loc, output, 0);
-    Value col = rewriter.create<memref::DimOp>(loc, output, 1);
+    // Value col = rewriter.create<memref::DimOp>(loc, output, 1);
     row = rewriter.create<arith::IndexCastOp>(loc, i64Type, row);
-    col = rewriter.create<arith::IndexCastOp>(loc, i64Type, col);
+    // col = rewriter.create<arith::IndexCastOp>(loc, i64Type, col);
     
     Value shift1 = rewriter.create<arith::ConstantOp>(
-        loc, i64Type, rewriter.getI64IntegerAttr(addrLen));
-    Value shift2 = rewriter.create<arith::ConstantOp>(
-        loc, i64Type, rewriter.getI64IntegerAttr(2 * addrLen));
-    row = rewriter.create<arith::ShLIOp>(loc, row, shift2);
-    col = rewriter.create<arith::ShLIOp>(loc, col, shift1);
+        loc, i64Type, rewriter.getI64IntegerAttr(spAddrLen));
+    // Value shift2 = rewriter.create<arith::ConstantOp>(
+    //     loc, i64Type, rewriter.getI64IntegerAttr(2 * spAddrLen));
+    row = rewriter.create<arith::ShLIOp>(loc, row, shift1);
+    // col = rewriter.create<arith::ShLIOp>(loc, col, shift2);
     
     // rs1 = indexCastOp
-    // rs2 = col << (2 * addrLen) | row << addrLen | spadAddrValue
+    // rs2 = row << spAddrLen | spadAddrValue
     Value rs1 = indexCastOp;
-    Value rs2 = rewriter.create<arith::OrIOp>(loc, col, 
-        rewriter.create<arith::OrIOp>(loc, row, spadAddrValue));
+    Value rs2 = rewriter.create<arith::OrIOp>(loc, row, spadAddrValue);
     rewriter.replaceOpWithNewOp<Mvout_IntrOp>(mvoutOp, rs1, rs2);
     return success();
   }
 
 private:
-  int64_t addrLen;
+  int64_t spAddrLen;
 };
 
 //===----------------------------------------------------------------------===//
@@ -286,8 +191,8 @@ private:
 struct BuckyBallVecMulWarp16Lowering : public ConvertOpToLLVMPattern<VecMulWarp16Op> {
   using ConvertOpToLLVMPattern<VecMulWarp16Op>::ConvertOpToLLVMPattern;
   explicit BuckyBallVecMulWarp16Lowering(LLVMTypeConverter &typeConverter,
-                                  int64_t addrLen)
-      : ConvertOpToLLVMPattern(typeConverter), addrLen(addrLen) {}
+                                  int64_t spAddrLen)
+      : ConvertOpToLLVMPattern(typeConverter), spAddrLen(spAddrLen) {}
   LogicalResult
   matchAndRewrite(VecMulWarp16Op vecMulWarp16Op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -296,23 +201,23 @@ struct BuckyBallVecMulWarp16Lowering : public ConvertOpToLLVMPattern<VecMulWarp1
     Value bSpAddr = vecMulWarp16Op.getBSpAddr();
     Value cSpAddr = vecMulWarp16Op.getCSpAddr();
     Value nLen = vecMulWarp16Op.getNLen();
-    // aSpAddr << addrLen
+    // aSpAddr << spAddrLen
     Value shift1 = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI64IntegerAttr(addrLen));
+        loc, rewriter.getI64IntegerAttr(spAddrLen));
     aSpAddr = rewriter.create<arith::ShLIOp>(loc, aSpAddr, shift1);
-    // nLen << (2 * addrLen)
+    // nLen << (2 * spAddrLen)
     Value shift2 = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI64IntegerAttr(2 * addrLen));    
+        loc, rewriter.getI64IntegerAttr(2 * spAddrLen));    
     nLen = rewriter.create<arith::ShLIOp>(loc, nLen, shift2);
-    // rs1 = aSpAddr << addrLen | bSpAddr
-    // rs2 = nLen << addrLen | cSpAddr
+    // rs1 = aSpAddr << spAddrLen | bSpAddr
+    // rs2 = nLen << spAddrLen | cSpAddr
     Value rs1 = rewriter.create<arith::OrIOp>(loc, aSpAddr, bSpAddr);
     Value rs2 = rewriter.create<arith::OrIOp>(loc, nLen, cSpAddr);
     rewriter.replaceOpWithNewOp<VecMulWarp16_IntrOp>(vecMulWarp16Op, rs1, rs2);
     return success();
   }
 private:
-  int64_t addrLen;
+  int64_t spAddrLen;
 };
 
 //===----------------------------------------------------------------------===//
@@ -479,11 +384,11 @@ class BuckyBallVecTileMatMulLowering : public ConvertOpToLLVMPattern<VecTileMatM
 public:
   using ConvertOpToLLVMPattern<VecTileMatMulOp>::ConvertOpToLLVMPattern;
   explicit BuckyBallVecTileMatMulLowering(LLVMTypeConverter &typeConverter, 
-                                          int64_t dim, int64_t addrLen, 
+                                          int64_t dim, int64_t spAddrLen, 
                                           int64_t spadRows, int64_t accRows,
                                           size_t sizeOfElemT, size_t sizeOfAccT,
                                           int64_t lane, int64_t warp)
-      : ConvertOpToLLVMPattern(typeConverter), dim(dim), addrLen(addrLen),
+      : ConvertOpToLLVMPattern(typeConverter), dim(dim), spAddrLen(spAddrLen),
         spadRows(spadRows), accRows(accRows), sizeOfElemT(sizeOfElemT), sizeOfAccT(sizeOfAccT), lane(lane), warp(warp) {}
 
   LogicalResult
@@ -796,11 +701,11 @@ public:
           rewriter.create<arith::ConstantIndexOp>(loc, dim)));
   bSpAddrStart = rewriter.create<arith::IndexCastOp>(loc, i64Type, bSpAddrStart);
   
-  // cSpAddrStart = 1 << (addrLen - 1);
+  // cSpAddrStart = 1 << (spAddrLen - 1);
   Value cSpAddrStart = rewriter.create<arith::ShLIOp>(loc, 
       rewriter.create<arith::ConstantIndexOp>(loc, 1), 
       rewriter.create<arith::SubIOp>(loc, 
-          rewriter.create<arith::ConstantIndexOp>(loc, addrLen), 
+          rewriter.create<arith::ConstantIndexOp>(loc, spAddrLen), 
           rewriter.create<arith::ConstantIndexOp>(loc, 1)));
   cSpAddrStart = rewriter.create<arith::IndexCastOp>(loc, i64Type, cSpAddrStart);
   
@@ -925,7 +830,7 @@ public:
 }
 private:
   int64_t dim;
-  int64_t addrLen;
+  int64_t spAddrLen;
   int64_t spadRows;
   int64_t accRows;
   size_t sizeOfElemT;
@@ -939,8 +844,8 @@ private:
 //===----------------------------------------------------------------------===//
 // struct BuckyBallCSRtoResidueLowering : public ConvertOpToLLVMPattern<CSRtoResidueOp> {
 //   using ConvertOpToLLVMPattern<CSRtoResidueOp>::ConvertOpToLLVMPattern;
-//   explicit BuckyBallCSRtoResidueLowering(LLVMTypeConverter &typeConverter, int64_t addrLen)
-//     	: ConvertOpToLLVMPattern<CSRtoResidueOp>(typeConverter), addrLen(addrLen) {}
+//   explicit BuckyBallCSRtoResidueLowering(LLVMTypeConverter &typeConverter, int64_t spAddrLen)
+//     	: ConvertOpToLLVMPattern<CSRtoResidueOp>(typeConverter), spAddrLen(spAddrLen) {}
 //   LogicalResult
 //   matchAndRewrite(CSRtoResidueOp csrtoResidueOp, typename CSRtoResidueOp::Adaptor adaptor,
 //                   ConversionPatternRewriter &rewriter) const override {
@@ -950,18 +855,18 @@ private:
 //   	Value residueArraySpAddr = csrtoResidueOp.getResidueArraySpAddr();
 //   	Value iterNum = csrtoResidueOp.getIterNum();
 
-// 		Value shift1 = rewriter.create<arith::ConstantOp>(loc, rewriter.getI64IntegerAttr(addrLen));
+// 		Value shift1 = rewriter.create<arith::ConstantOp>(loc, rewriter.getI64IntegerAttr(spAddrLen));
 // 		csrRowPtrSpAddr = rewriter.create<arith::ShLIOp>(loc, csrRowPtrSpAddr, shift1);
 // 		iterNum = rewriter.create<arith::ShLIOp>(loc, iterNum, shift1);
-// 		// rs1 = csrRowPtrSpAddr << addrLen | csrColIdxSpAddr
-// 		// rs2 = iterNum << addrLen | residueArraySpAddr
+// 		// rs1 = csrRowPtrSpAddr << spAddrLen | csrColIdxSpAddr
+// 		// rs2 = iterNum << spAddrLen | residueArraySpAddr
 //   	Value rs1 = rewriter.create<arith::OrIOp>(loc, csrRowPtrSpAddr, csrColIdxSpAddr);
 //   	Value rs2 = rewriter.create<arith::OrIOp>(loc, iterNum, residueArraySpAddr);
 //   	rewriter.replaceOpWithNewOp<CSRtoResidue_IntrOp>(csrtoResidueOp, rs1, rs2);
 //   	return success();
 //   }
 // private:
-//   int64_t addrLen;
+//   int64_t spAddrLen;
 // };
 
 // class BuckyBallSparseMergeTileMatMulLowering : public ConvertOpToLLVMPattern<SparseMergeTileMatMulOp> {
@@ -1113,23 +1018,23 @@ private:
 
 void mlir::populateBuckyBallLegalizeForLLVMExportPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns, int64_t dim,
-    int64_t addrLen, int64_t accRows, int64_t spadRows, size_t sizeOfElemT,
+    int64_t memAddrLen, int64_t spAddrLen, int64_t accRows, int64_t spadRows, size_t sizeOfElemT,
     size_t sizeOfAccT, int64_t warp , int64_t lane) {
   patterns
       .add<ForwardOperands<func::CallOp>, ForwardOperands<func::CallIndirectOp>,
            ForwardOperands<func::ReturnOp>>(converter, &converter.getContext());
   patterns.add<BuckyBallFlushLowering>(converter);
-  patterns.add<BuckyBallMvinLowering>(converter, addrLen);
-  patterns.add<BuckyBallMvin2Lowering>(converter, addrLen);
-  patterns.add<BuckyBallMvin3Lowering>(converter, addrLen);
-  patterns.add<BuckyBallMvoutLowering>(converter, addrLen);
-  patterns.add<BuckyBallVecMulWarp16Lowering>(converter, addrLen);
+  patterns.add<BuckyBallMvinLowering>(converter, spAddrLen);
+//   patterns.add<BuckyBallMvin2Lowering>(converter, spAddrLen);
+//   patterns.add<BuckyBallMvin3Lowering>(converter, spAddrLen);
+  patterns.add<BuckyBallMvoutLowering>(converter, spAddrLen);
+  patterns.add<BuckyBallVecMulWarp16Lowering>(converter, spAddrLen);
   patterns.add<BuckyBallMetaTileMatMulLowering>(converter, lane);
   patterns.add<BuckyBallMergeTileMatMulLowering>(converter);
   patterns.add<BuckyBallVecTileMatMulLowering>(converter, dim, 
-      addrLen, spadRows, accRows, sizeOfElemT, sizeOfAccT, warp, lane);
+      spAddrLen, spadRows, accRows, sizeOfElemT, sizeOfAccT, warp, lane);
   // patterns.add<BuckyBallVecSparseTileMatMulLowering>(converter, sizeOfElemT);
-  // patterns.add<BuckyBallCSRtoResidueLowering>(converter, addrLen);
+  // patterns.add<BuckyBallCSRtoResidueLowering>(converter, spAddrLen);
   // patterns.add<BuckyBallSparseMergeTileMatMulLowering>(converter, sizeOfElemT);	
 }
 
@@ -1140,9 +1045,10 @@ void mlir::configureBuckyBallLegalizeForExportTarget(
 //                          memref::MemRefDialect,
 //                          BuckyBallDialect,
 //                          LLVM::LLVMDialect>();
-  target.addLegalOp<Flush_IntrOp, Mvin_IntrOp, Mvin2_IntrOp, Mvin3_IntrOp, 
+  target.addLegalOp<Flush_IntrOp, Mvin_IntrOp, // Mvin2_IntrOp, Mvin3_IntrOp, 
                     Mvout_IntrOp, VecMulWarp16_IntrOp>();
-  target.addIllegalOp<FlushOp, MvinOp, Mvin2Op, Mvin3Op, MvoutOp, 
+  target.addIllegalOp<FlushOp, MvinOp, //Mvin2Op, Mvin3Op, 
+                      MvoutOp, 
                       VecTileMatMulOp, MergeTileMatMulOp, 
                       MetaTileMatMulOp, VecMulWarp16Op, PrintOp, PrintScalarOp>();
 }

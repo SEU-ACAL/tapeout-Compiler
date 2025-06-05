@@ -253,9 +253,15 @@ public:
   Option<int64_t> dim{*this, "dim", 
                       llvm::cl::desc("Size of Scratchpad line."),
                       llvm::cl::init(16)};
-  Option<int64_t> addrLen{*this, "addr_len",
-                          llvm::cl::desc("The length of address."),
+  Option<int64_t> memAddrLen{*this, "mem_addr_len",
+                          llvm::cl::desc("The length of memory address."),
                           llvm::cl::init(32)};
+  Option<int64_t> spAddrLen{*this, "sp_addr_len",
+                          llvm::cl::desc("The length of sp address."),
+                          llvm::cl::init(14)};
+  Option<int64_t> spadRows{*this, "spad_rows",
+                           llvm::cl::desc("The row of spad."),
+                           llvm::cl::init(1024)};
   Option<int64_t> accRows{*this, "acc_rows", llvm::cl::desc("The row of acc."),
                           llvm::cl::init(1024)};
   Option<int64_t> bankRows{*this, "bank_rows",
@@ -307,7 +313,7 @@ void LowerBuckyBallToLLVMPass::runOnOperation() {
   LLVMConversionTarget target(*context);
   configureBuckyBallLegalizeForExportTarget(target);
   populateBuckyBallLegalizeForLLVMExportPatterns(converter, patterns, 
-      dim, addrLen, accRows, bankRows, sizeOfElemT, sizeOfAccT, warp, lane);
+      dim, memAddrLen, spAddrLen, accRows, spadRows, sizeOfElemT, sizeOfAccT, warp, lane);
   populateAffineToStdConversionPatterns(patterns);
   populateSCFToControlFlowConversionPatterns(patterns);
   mlir::arith::populateArithToLLVMConversionPatterns(converter, patterns);

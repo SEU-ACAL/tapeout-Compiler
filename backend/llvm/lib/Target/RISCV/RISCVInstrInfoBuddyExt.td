@@ -180,13 +180,26 @@ def LOOP_CONV_WS_CONFIG6 : RVInstR<0b0010101, 0b011, OPC_CUSTOM_3, (outs),
 }
 
 // -----------------------------------------------------------------------------
-// BuckyBall operations (Funct start from 0x31)
+// BuckyBall operations (Funct start from 0x24)
 // -----------------------------------------------------------------------------
 let Predicates = [HasBuddyExt] in 
-def VEC_MUL_WARP16 : RVInstR<0b0011111/*0x31*/, 0b011, OPC_CUSTOM_3, (outs),
+def BB_MVIN : RVInstR<0b0011000/*24*/, 0b011, OPC_CUSTOM_3, (outs),
+                        (ins GPR:$rs1, GPR:$rs2), "bb_mvin", "$rs1, $rs2"> {
+    let rd = 0;
+}
+
+let Predicates = [HasBuddyExt] in 
+def BB_MVOUT : RVInstR<0b0011001/*25*/, 0b011, OPC_CUSTOM_3, (outs),
+                        (ins GPR:$rs1, GPR:$rs2), "bb_mvout", "$rs1, $rs2"> {
+    let rd = 0;
+}
+
+let Predicates = [HasBuddyExt] in 
+def VEC_MUL_WARP16 : RVInstR<0b0100000/*32*/, 0b011, OPC_CUSTOM_3, (outs),
                         (ins GPR:$rs1, GPR:$rs2), "bb_mul_warp16", "$rs1, $rs2"> {
     let rd = 0;
 }
+
 
 
 let Predicates = [HasBuddyExt] in 
@@ -267,5 +280,11 @@ def : Pat<(int_riscv_loop_conv_ws_config6 GPR:$rs1, GPR:$rs2), (LOOP_CONV_WS_CON
 // -----------------------------------------------------------------------------
 // BuckyBall operations
 // -----------------------------------------------------------------------------
+let Predicates = [HasBuddyExt] in 
+def : Pat<(int_riscv_bb_mvin GPR:$rs1, GPR:$rs2), (BB_MVIN GPR:$rs1, GPR:$rs2)>;
+
+let Predicates = [HasBuddyExt] in 
+def : Pat<(int_riscv_bb_mvout GPR:$rs1, GPR:$rs2), (BB_MVOUT GPR:$rs1, GPR:$rs2)>;
+
 let Predicates = [HasBuddyExt] in 
 def : Pat<(int_riscv_bb_mul_warp16 GPR:$rs1, GPR:$rs2), (VEC_MUL_WARP16 GPR:$rs1, GPR:$rs2)>;
