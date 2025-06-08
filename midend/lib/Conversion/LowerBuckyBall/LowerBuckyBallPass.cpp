@@ -237,6 +237,82 @@ private:
   }
 };
 
+class BBMultiCoreOpLowering : public ConversionPattern {
+public:
+  explicit BBMultiCoreOpLowering(MLIRContext *context, int32_t targetHartId)
+      : ConversionPattern(buckyball::MultiCoreOp::getOperationName(), 1, context), targetHartId(targetHartId) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op->getLoc();
+    auto context = rewriter.getContext();
+    
+    // 读取 hart ID
+    auto i32Type = rewriter.getI32Type();
+    auto inlineAsmOp = rewriter.create<LLVM::InlineAsmOp>(
+        loc, i32Type, 
+        /*operands=*/ValueRange{},
+        /*asm_string=*/StringRef("csrr $0, mhartid"),
+        /*constraints=*/StringRef("=r"),
+        /*has_side_effects=*/false,
+        /*is_align_stack=*/false,
+        /*asm_dialect=*/LLVM::AsmDialectAttr{},
+        /*operand_attrs=*/ArrayAttr{});
+    
+    Value hartId = inlineAsmOp.getResult(0);
+    
+    // 创建目标 hart ID 常量
+    Value targetHart = rewriter.create<LLVM::ConstantOp>(
+        loc, i32Type, rewriter.getI32IntegerAttr(targetHartId));
+    
+    // 比较当前 hart ID 和目标 hart ID
+    Value isCorrectHart = rewriter.create<LLVM::ICmpOp>(
+        loc, LLVM::ICmpPredicate::eq, hartId, targetHart);
+    
+    // 创建基本块
+    Block *currentBlock = rewriter.getInsertionBlock();
+    Region *parentRegion = currentBlock->getParent();
+    Block *continueBlock = rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
+    Block *wfiBlock = rewriter.createBlock(parentRegion, parentRegion->end());
+    
+    // 在当前块创建条件分支
+    rewriter.setInsertionPointToEnd(currentBlock);
+    rewriter.create<LLVM::CondBrOp>(loc, isCorrectHart, continueBlock, wfiBlock);
+    
+    // 设置 wfi 块 - 非匹配的 hart 进入等待
+    rewriter.setInsertionPointToStart(wfiBlock);
+    
+    // 非匹配的 hart 进入 wfi 等待
+    rewriter.create<LLVM::InlineAsmOp>(
+        loc, /*result_types=*/TypeRange{},
+        /*operands=*/ValueRange{},
+        /*asm_string=*/StringRef(
+            "li a0, 0\n"    // 返回值设为 0
+            "1:\n"          // 循环标签
+            "wfi\n"         // Wait For Interrupt
+            "j 1b"          // 继续等待
+        ),
+        /*constraints=*/StringRef(""),
+        /*has_side_effects=*/true,
+        /*is_align_stack=*/false,
+        /*asm_dialect=*/LLVM::AsmDialectAttr{},
+        /*operand_attrs=*/ArrayAttr{});
+    
+    rewriter.create<LLVM::UnreachableOp>(loc);
+    
+    // 恢复插入点到继续块
+    rewriter.setInsertionPointToStart(continueBlock);
+    
+    // 删除原始操作
+    rewriter.eraseOp(op);
+    return success();
+  }
+
+private:
+  int32_t targetHartId;
+};
+
 namespace {
 class LowerBuckyBallToLLVMPass
     : public PassWrapper<LowerBuckyBallToLLVMPass, OperationPass<ModuleOp>> {
@@ -279,7 +355,9 @@ public:
   Option<int64_t> lane{*this, "lane", 
                        llvm::cl::desc("Size of lane."),
                        llvm::cl::init(16)};
-
+  Option<int32_t> hartId{*this, "hartId", 
+                       llvm::cl::desc("The hart id."),
+                       llvm::cl::init(0)};
 
   // Override explicitly to allow conditional dialect dependence.
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -312,8 +390,8 @@ void LowerBuckyBallToLLVMPass::runOnOperation() {
   RewritePatternSet patterns(context);
   LLVMConversionTarget target(*context);
   configureBuckyBallLegalizeForExportTarget(target);
-  populateBuckyBallLegalizeForLLVMExportPatterns(converter, patterns, 
-      dim, memAddrLen, spAddrLen, accRows, spadRows, sizeOfElemT, sizeOfAccT, warp, lane);
+  populateBuckyBallLegalizeForLLVMExportPatterns(converter, patterns, dim, memAddrLen, 
+    spAddrLen, accRows, spadRows, sizeOfElemT, sizeOfAccT, warp, lane, hartId);
   populateAffineToStdConversionPatterns(patterns);
   populateSCFToControlFlowConversionPatterns(patterns);
   mlir::arith::populateArithToLLVMConversionPatterns(converter, patterns);
@@ -322,6 +400,7 @@ void LowerBuckyBallToLLVMPass::runOnOperation() {
   populateFuncToLLVMConversionPatterns(converter, patterns);
   patterns.add<BBPrintOpLowering>(&getContext());
   patterns.add<BBPrintScalarOpLowering>(&getContext());
+  patterns.add<BBMultiCoreOpLowering>(&getContext(), hartId);
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
 }

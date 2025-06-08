@@ -1019,7 +1019,7 @@ private:
 void mlir::populateBuckyBallLegalizeForLLVMExportPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns, int64_t dim,
     int64_t memAddrLen, int64_t spAddrLen, int64_t accRows, int64_t spadRows, size_t sizeOfElemT,
-    size_t sizeOfAccT, int64_t warp , int64_t lane) {
+    size_t sizeOfAccT, int64_t warp , int64_t lane, int64_t hartId) {
   patterns
       .add<ForwardOperands<func::CallOp>, ForwardOperands<func::CallIndirectOp>,
            ForwardOperands<func::ReturnOp>>(converter, &converter.getContext());
@@ -1050,5 +1050,5 @@ void mlir::configureBuckyBallLegalizeForExportTarget(
   target.addIllegalOp<FlushOp, MvinOp, //Mvin2Op, Mvin3Op, 
                       MvoutOp, 
                       VecTileMatMulOp, MergeTileMatMulOp, 
-                      MetaTileMatMulOp, VecMulWarp16Op, PrintOp, PrintScalarOp>();
+                      MetaTileMatMulOp, VecMulWarp16Op, PrintOp, PrintScalarOp, MultiCoreOp>();
 }

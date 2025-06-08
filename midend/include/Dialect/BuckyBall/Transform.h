@@ -53,7 +53,7 @@ using OwningRewritePatternList = RewritePatternSet;
 void populateBuckyBallLegalizeForLLVMExportPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns, int64_t dim,
     int64_t memAddrLen, int64_t spAddrLen, int64_t accRows, int64_t bankRows, size_t sizeOfElemT,
-    size_t sizeOfAccT, int64_t warp, int64_t lane);
+    size_t sizeOfAccT, int64_t warp, int64_t lane, int64_t hartId);
 void configureBuckyBallLegalizeForExportTarget(LLVMConversionTarget &target);
 
 } // namespace mlir

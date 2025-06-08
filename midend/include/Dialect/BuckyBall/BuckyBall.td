@@ -252,6 +252,14 @@ def PrintScalarOp : BuckyBall_Op<"print_scalar"> {
   let assemblyFormat = "$input attr-dict `:` type($input)";
 }
 
+// 只有当hartid为指定值时，才运行，否则跳过
+def MultiCoreOp : BuckyBall_Op<"multicore"> {
+  let summary = "Multi-core operation";
+  let arguments = (ins); 
+  let assemblyFormat = "attr-dict";
+}
+
+
 //===----------------------------------------------------------------------===//
 // BuckyBall intrinsic operation definitions
 //===----------------------------------------------------------------------===//
