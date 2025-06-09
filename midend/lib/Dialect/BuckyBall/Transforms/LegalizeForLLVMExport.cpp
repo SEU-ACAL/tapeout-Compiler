@@ -201,18 +201,15 @@ struct BuckyBallVecMulWarp16Lowering : public ConvertOpToLLVMPattern<VecMulWarp1
     Value bSpAddr = vecMulWarp16Op.getBSpAddr();
     Value cSpAddr = vecMulWarp16Op.getCSpAddr();
     Value nLen = vecMulWarp16Op.getNLen();
-    // aSpAddr << spAddrLen
+    // rs1 =  (bSpAddr << spAddrLen)  | aSpAddr 
+    // rs2 = (nLen << spAddrLen) | cSpAddr 
+    IntegerType i64Type = rewriter.getI64Type();
     Value shift1 = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI64IntegerAttr(spAddrLen));
-    aSpAddr = rewriter.create<arith::ShLIOp>(loc, aSpAddr, shift1);
-    // nLen << (2 * spAddrLen)
-    Value shift2 = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI64IntegerAttr(2 * spAddrLen));    
-    nLen = rewriter.create<arith::ShLIOp>(loc, nLen, shift2);
-    // rs1 = aSpAddr << spAddrLen | bSpAddr
-    // rs2 = nLen << spAddrLen | cSpAddr
-    Value rs1 = rewriter.create<arith::OrIOp>(loc, aSpAddr, bSpAddr);
-    Value rs2 = rewriter.create<arith::OrIOp>(loc, nLen, cSpAddr);
+        loc, i64Type, rewriter.getI64IntegerAttr(spAddrLen));
+    Value bSpAddrShifted = rewriter.create<arith::ShLIOp>(loc, bSpAddr, shift1);
+    Value nLenShifted = rewriter.create<arith::ShLIOp>(loc, nLen, shift1);
+    Value rs1 = rewriter.create<arith::OrIOp>(loc, aSpAddr, bSpAddrShifted);
+    Value rs2 = rewriter.create<arith::OrIOp>(loc, cSpAddr, nLenShifted);
     rewriter.replaceOpWithNewOp<VecMulWarp16_IntrOp>(vecMulWarp16Op, rs1, rs2);
     return success();
   }
