@@ -4,8 +4,8 @@ set(RISCV_GNU_TOOLCHAIN ${BUDDY_MLIR_DIR}/build/thirdparty/riscv-gnu-toolchain)
 set(CMAKE_CXX_COMPILER  ${RISCV_GNU_TOOLCHAIN}/bin/riscv64-unknown-linux-gnu-g++)
 
 set(BUDDY_GEMMINI_DIR ${BUDDY_EXAMPLES_DIR}/BuddyGemmini)
-set(INTERFACE_DIR ${BUDDY_MLIR_DIR}/frontend/Interfaces/)
-set(INCLUDE_DIR ${BUDDY_GEMMINI_DIR}/include/)
+set(INTERFACE_DIR ${BUDDY_MLIR_DIR}/frontend/Interfaces)
+set(INCLUDE_DIR ${BUDDY_GEMMINI_DIR}/include)
 
 
 add_custom_command(
